@@ -185,6 +185,6 @@ $wgGroupPermissions['sysop']['pagetranslation'] = true;
 $wgGroupPermissions['sysop']['translate-manage'] = true;
 $wgTranslateDocumentationLanguageCode = 'qqq';
 $wgExtraLanguageNames['qqq'] = 'Message documentation'; # No linguistic content. Used for documenting messages
-
+$wgShowExceptionDetails = true;
 # End of automatically generated settings.
 # Add more configuration options below.
