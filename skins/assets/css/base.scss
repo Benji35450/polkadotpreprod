@@ -1,0 +1,140 @@
+body {
+  @apply bg-brown-800 font-serif font-thin text-brown-200;
+  background-attachment: fixed;
+  background-image: url("../assets/images/zodiac-wiki-bg.png");
+  background-position: center;
+  background-size: cover;
+}
+
+.bg-blur-12 {
+  backdrop-filter: blur(12px);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  @apply text-brown-100 leading-none p-0 m-0 mt-12 mb-4 pb-2 border-b border-brown-500;
+}
+
+h1 {
+  @apply text-4xl;
+}
+
+h2 {
+  @apply text-3xl;
+}
+
+h3 {
+  @apply text-2xl text-brown-400;
+}
+
+h4 {
+  @apply text-lg;
+}
+
+h6 {
+  @apply text-sm;
+}
+
+b, strong {
+  @apply font-black text-brown-100;
+}
+
+.main-content {
+  ul {
+    margin-bottom: 2rem;
+  }
+  
+  li {
+    margin-bottom: 1rem;
+  }
+}
+
+.thumb {
+  background: #0c1016 !important;
+  @apply p-2 m-2 border border-brown-900 text-brown-100;
+
+  .thumbcaption {
+      @apply mt-2;
+  }
+}
+
+* > table.wikitable > tr > th,
+* > table.wikitable > tr > td,
+* > table.wikitable > * > tr > th,
+* > table.wikitable > * > tr > td {
+  @apply border border-brown-500 px-2;
+}
+
+table.wikitable, table.mw-datatable, table.mw-abuselog-details {
+  background: #170B05 !important;
+  @apply text-brown-200 border border-brown-900;
+
+  .sv-space {
+      display: none;
+  }
+
+  th {
+      background: #170B05 !important;
+  }
+
+  td {
+      background: #201912 !important;
+  }
+
+  .center a img {
+    @apply mx-auto;
+  }
+}
+
+.articlebody ol, .mw-parser-output ol {
+  @apply list-decimal pl-2;
+}
+
+.articlebody ul, .mw-parser-output ul {
+  @apply list-disc pl-2;
+}
+
+p {
+  @apply mb-2;
+  &:last-of-type {
+    @apply mb-0;
+  }
+}
+
+textarea {
+  @apply bg-brown-900 border border-brown-500 text-white p-2;
+}
+
+code {
+  @apply bg-brown-900 border border-brown-800 text-white py-px px-2;
+}
+
+table {
+  border-collapse: separate;
+  table-layout: fixed;
+}
+
+@media (max-width: 1024px) {
+  table {
+    width: 100% !important;
+    overflow-x: auto;
+    display: block;
+  }
+  td {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    word-wrap: break-word;
+  }
+}
+
+
+input:not([type]), input[type=text], input[type=search] {
+  @apply py-1 px-2 text-white bg-brown-800;
+}
+
+select, button, input {
+  @apply bg-brown-900 border border-black rounded-sm shadow text-brown-100 p-1;
+
+  &:disabled {
+      @apply text-red-200 italic;
+  }
+}

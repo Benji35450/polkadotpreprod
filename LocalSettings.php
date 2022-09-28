@@ -130,7 +130,8 @@ $wgDiff3 = "/usr/bin/diff3";
 
 ## Default skin: you can change the default skin. Use the internal symbolic
 ## names, e.g. 'vector' or 'monobook':
-$wgDefaultSkin = "vector";
+wfLoadSkin( 'zodiac' );
+$wgDefaultSkin = "zodiac";
 
 # Enabled skins.
 # The following skins were automatically enabled:
@@ -176,15 +177,6 @@ wfLoadExtension( 'WikiEditor' );
 wfLoadExtension( 'Babel' );
 wfLoadExtension( 'cldr' );
 wfLoadExtension( 'UniversalLanguageSelector' );
-wfLoadExtension( 'Translate' );
-$wgGroupPermissions['user']['translate'] = true;
-$wgGroupPermissions['user']['translate-messagereview'] = true;
-$wgGroupPermissions['user']['translate-groupreview'] = true;
-$wgGroupPermissions['user']['translate-import'] = true;
-$wgGroupPermissions['sysop']['pagetranslation'] = true;
-$wgGroupPermissions['sysop']['translate-manage'] = true;
-$wgTranslateDocumentationLanguageCode = 'qqq';
-$wgExtraLanguageNames['qqq'] = 'Message documentation'; # No linguistic content. Used for documenting messages
-$wgShowExceptionDetails = true;
+
 # End of automatically generated settings.
 # Add more configuration options below.
