@@ -188,4 +188,3 @@ $wgExtraLanguageNames['qqq'] = 'Message documentation'; # No linguistic content.
 
 # End of automatically generated settings.
 # Add more configuration options below.
-
