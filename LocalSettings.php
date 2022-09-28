@@ -176,5 +176,6 @@ wfLoadExtension( 'WikiEditor' );
 wfLoadExtension( 'Babel' );
 wfLoadExtension( 'cldr' );
 wfLoadExtension( 'UniversalLanguageSelector' );
+$wgShowExceptionDetails = true;
 # End of automatically generated settings.
 # Add more configuration options below.
