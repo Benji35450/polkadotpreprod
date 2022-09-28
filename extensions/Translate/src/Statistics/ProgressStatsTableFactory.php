@@ -6,6 +6,7 @@ namespace MediaWiki\Extension\Translate\Statistics;
 use IContextSource;
 use MediaWiki\Extension\Translate\Utilities\ConfigHelper;
 use MediaWiki\Linker\LinkRenderer;
+use StatsTable;
 
 /**
  * @author Niklas Laxström

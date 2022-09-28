@@ -9,13 +9,11 @@
 
 use MediaWiki\Extension\Translate\PageTranslation\MoveTranslatableBundleSpecialPage;
 use MediaWiki\Extension\Translate\PageTranslation\ParsingFailure;
-use MediaWiki\Extension\Translate\PageTranslation\TranslationUnit;
 use MediaWiki\Extension\Translate\Services;
 use MediaWiki\Extension\Translate\SystemUsers\FuzzyBot;
 use MediaWiki\Linker\LinkTarget;
 use MediaWiki\Logger\LoggerFactory;
 use MediaWiki\MediaWikiServices;
-use MediaWiki\Page\PageIdentity;
 use MediaWiki\Revision\MutableRevisionRecord;
 use MediaWiki\Revision\RenderedRevision;
 use MediaWiki\Revision\RevisionRecord;
@@ -55,11 +53,6 @@ class PageTranslationHooks {
 
 		self::preprocessTagPage( $wikitextParser, $text, $state );
 
-		// Skip further interface message parsing
-		if ( $wikitextParser->getOptions()->getInterfaceMessage() ) {
-			return;
-		}
-
 		// For section previews, perform additional clean-up, given tags are often
 		// unbalanced when we preview one section only.
 		if ( $wikitextParser->getOptions()->getIsSectionPreview() ) {
@@ -74,42 +67,34 @@ class PageTranslationHooks {
 			return;
 		}
 
-		try {
-			self::$renderingContext = true;
-			[ , $code ] = TranslateUtils::figureMessage( $title->getText() );
-			$name = $page->getPageDisplayTitle( $code );
-			if ( $name ) {
-				$name = $wikitextParser->recursivePreprocess( $name );
+		self::$renderingContext = true;
+		[ , $code ] = TranslateUtils::figureMessage( $title->getText() );
+		$name = $page->getPageDisplayTitle( $code );
+		if ( $name ) {
+			$name = $wikitextParser->recursivePreprocess( $name );
 
-				$langConv = MediaWikiServices::getInstance()->getLanguageConverterFactory()
-					->getLanguageConverter( $wikitextParser->getTargetLanguage() );
-				$name = $langConv->convert( $name );
-				$wikitextParser->getOutput()->setDisplayTitle( $name );
-			}
-			self::$renderingContext = false;
-		} catch ( Exception $e ) {
-			LoggerFactory::getInstance( 'Translate' )->error(
-				'T302754 Failed to set display title for page {title}',
-				[
-					'title' => $title->getPrefixedDBkey(),
-					'text' => $text,
-					'pageid' => $title->getId(),
-				]
-			);
-
-			// Re-throw to preserve behavior
-			throw $e;
+			$langConv = MediaWikiServices::getInstance()->getLanguageConverterFactory()
+				->getLanguageConverter( $wikitextParser->getTargetLanguage() );
+			$name = $langConv->convert( $name );
+			$wikitextParser->getOutput()->setDisplayTitle( $name );
 		}
+		self::$renderingContext = false;
 
 		$extensionData = [
 			'languagecode' => $code,
-			'messagegroupid' => $page->getMessageGroupId(),
-			'sourcepagetitle' => [
+			'messagegroupid' => $page->getMessageGroupId()
+		];
+		// Backwards-compatibility. If SemanticMediaWiki is installed, write the whole
+		// Title object since prior to https://github.com/SemanticMediaWiki/SemanticMediaWiki/pull/4869
+		// SMW could only understand it. To be removed after SMW release.
+		if ( ExtensionRegistry::getInstance()->isLoaded( 'SemanticMediaWiki' ) ) {
+			$extensionData['sourcepagetitle'] = $page->getTitle();
+		} else {
+			$extensionData['sourcepagetitle'] = [
 				'namespace' => $page->getTitle()->getNamespace(),
 				'dbkey' => $page->getTitle()->getDBkey()
-			]
-		];
-
+			];
+		}
 		$wikitextParser->getOutput()->setExtensionData(
 			'translate-translation-page', $extensionData
 		);
@@ -128,7 +113,6 @@ class PageTranslationHooks {
 	 */
 	public static function preprocessTagPage( $wikitextParser, &$text, $state ): void {
 		$translatablePageParser = Services::getInstance()->getTranslatablePageParser();
-
 		if ( $translatablePageParser->containsMarkup( $text ) ) {
 			try {
 				$parserOutput = $translatablePageParser->parse( $text );
@@ -142,11 +126,6 @@ class PageTranslationHooks {
 			} catch ( ParsingFailure $e ) {
 				wfDebug( 'ParsingFailure caught; expected' );
 			}
-		} else {
-			// If the text doesn't contain <translate> markup, it can still contain <tvar> in the
-			// context of a Parsoid template expansion sub-pipeline. We strip these as well.
-			$unit = new TranslationUnit( $text );
-			$text = $unit->getTextForTrans();
 		}
 	}
 
@@ -276,20 +255,6 @@ class PageTranslationHooks {
 				wfMessage( 'tps-edit-sourcepage-text' )->parse(),
 				'translate-edit-documentation'
 			);
-			// TECHNICALLY this would only be necessary for 1.38+, but the way the message is
-			// written is also true for 1.37-; therefore it's reasonable to not add another version
-			// check here.
-			// The check is "we're using visual editor for WYSIWYG" (as opposed to "for wikitext
-			// edition") - the message will not be displayed in that case.
-			$request = RequestContext::getMain()->getRequest();
-			if ( $request->getVal( 'action' ) === 'visualeditor' &&
-				$request->getVal( 'paction' ) !== 'wikitext'
-			) {
-				$notices[] = Html::warningBox(
-					wfMessage( 'tps-edit-sourcepage-ve-warning-limited-text' )->parse(),
-					'translate-edit-documentation'
-				);
-			}
 		}
 	}
 
@@ -380,36 +345,34 @@ class PageTranslationHooks {
 		return true;
 	}
 
-	private static function updateTranslationPage(
-		TranslatablePage $page, $code, $user, $flags, $summary, ?string $triggerAction = null
-	): void {
+	public static function updateTranslationPage(
+		TranslatablePage $page, $code, $user, $flags, $summary
+	) {
 		$source = $page->getTitle();
 		$target = $source->getSubpage( $code );
-		$mwInstance = MediaWikiServices::getInstance();
 
 		// We don't know and don't care
 		$flags &= ~EDIT_NEW & ~EDIT_UPDATE;
 
 		// Update the target page
-		$job = TranslateRenderJob::newJob( $target, $triggerAction );
+		$job = TranslateRenderJob::newJob( $target );
 		$job->setUser( $user );
 		$job->setSummary( $summary );
 		$job->setFlags( $flags );
-		$mwInstance->getJobQueueGroup()->push( $job );
+		TranslateUtils::getJobQueueGroup()->push( $job );
 
 		// Invalidate caches so that language bar is up-to-date
 		$pages = $page->getTranslationPages();
-		$wikiPageFactory = $mwInstance->getWikiPageFactory();
 		foreach ( $pages as $title ) {
 			if ( $title->equals( $target ) ) {
 				// Handled by the TranslateRenderJob
 				continue;
 			}
 
-			$wikiPage = $wikiPageFactory->newFromTitle( $title );
+			$wikiPage = WikiPage::factory( $title );
 			$wikiPage->doPurge();
 		}
-		$sourceWikiPage = $wikiPageFactory->newFromTitle( $source );
+		$sourceWikiPage = WikiPage::factory( $source );
 		$sourceWikiPage->doPurge();
 	}
 
@@ -588,11 +551,11 @@ class PageTranslationHooks {
 	private static function getTranslatablePageStatus( Title $title ) {
 		// Check if this is a source page or a translation page
 		$page = TranslatablePage::newFromTitle( $title );
-		if ( $page->getMarkedTag() === null ) {
+		if ( $page->getMarkedTag() === false ) {
 			$page = TranslatablePage::isTranslationPage( $title );
 		}
 
-		if ( $page === false || $page->getMarkedTag() === null ) {
+		if ( $page === false || $page->getMarkedTag() === false ) {
 			return null;
 		}
 
@@ -766,15 +729,22 @@ class PageTranslationHooks {
 			// @todo Use Message object instead.
 
 			call_user_func_array( [ $status, 'fatal' ], $msg );
+			// @todo Remove this line after this extension do not support mediawiki version 1.36 and before
+			$status->value = EditPage::AS_HOOK_ERROR_EXPECTED;
 			return false;
 		}
 
 		return true;
 	}
 
-	protected static function tpSyntaxError( ?PageIdentity $page, ?Content $content ): ?TPException {
+	/**
+	 * @param mixed|null $title Should be ?PageIdentity once the extension is MW 1.36+
+	 * @param Content|null $content
+	 * @return TPException|null
+	 */
+	protected static function tpSyntaxError( $title, ?Content $content ): ?TPException {
 		// T163254: Ignore translation markup on non-wikitext pages
-		if ( !$content instanceof WikitextContent || !$page ) {
+		if ( !$content instanceof WikitextContent || !$title ) {
 			return null;
 		}
 
@@ -812,10 +782,7 @@ class PageTranslationHooks {
 	) {
 		$content = $renderedRevision->getRevision()->getContent( SlotRecord::MAIN );
 
-		$e = self::tpSyntaxError(
-			$renderedRevision->getRevision()->getPage(),
-			$content
-		);
+		$e = self::tpSyntaxError( $renderedRevision->getRevision()->getPageAsLinkTarget(), $content );
 		if ( $e ) {
 			call_user_func_array( [ $hookStatus, 'fatal' ], $e->getMsg() );
 
@@ -896,12 +863,9 @@ class PageTranslationHooks {
 		}
 
 		$title = Title::newFromLinkTarget( $rev->getPageAsLinkTarget() );
-		$bundleFactory = Services::getInstance()->getTranslatableBundleFactory();
-		$bundle = $bundleFactory->getBundle( $title );
-
-		if ( $bundle ) {
-			$bundleStore = $bundleFactory->getStore( $bundle );
-			$bundleStore->handleNullRevisionInsert( $bundle, $rev );
+		$page = TranslatablePage::newFromTitle( $title );
+		if ( $page->getReadyTag() === $parentId ) {
+			$page->addReadyTag( $rev->getId() );
 		}
 	}
 
@@ -1075,9 +1039,12 @@ class PageTranslationHooks {
 	 */
 	public static function disableDelete( $article, $out, &$reason ) {
 		$title = $article->getTitle();
-		$bundle = Services::getInstance()->getTranslatableBundleFactory()->getBundle( $title );
-		$isDeletableBundle = $bundle && $bundle->isDeletable();
-		if ( $isDeletableBundle || TranslatablePage::isTranslationPage( $title ) ) {
+		$translatablePage = TranslatablePage::newFromTitle( $title );
+
+		if (
+			$translatablePage->getMarkedTag() !== false ||
+			TranslatablePage::isTranslationPage( $title )
+		) {
 			$new = SpecialPage::getTitleFor(
 				'PageTranslationDeletePage',
 				$title->getPrefixedText()
@@ -1138,7 +1105,7 @@ class PageTranslationHooks {
 				$pageTranslation = SpecialPage::getTitleFor( 'PageTranslation' );
 				$params = [ 'target' => $title->getPrefixedText(), 'do' => 'mark' ];
 
-				if ( $marked === null ) {
+				if ( $marked === false ) {
 					// This page has never been marked
 					$linkDesc = $context->msg( 'translate-tag-markthis' )->text();
 					$actions[] = $linker->makeKnownLink( $pageTranslation, $linkDesc, [], $params );
@@ -1274,8 +1241,7 @@ class PageTranslationHooks {
 			'services' => [
 				'ObjectFactory',
 				'PermissionManager',
-				'Translate:TranslatableBundleMover',
-				'Translate:TranslatableBundleFactory'
+				'Translate:TranslatableBundleMover'
 			],
 			'args' => [
 				$movePageSpec
@@ -1382,7 +1348,7 @@ class PageTranslationHooks {
 
 	/**
 	 * Converts the edit tab (if exists) for translation pages to translate tab.
-	 * Hook: SkinTemplateNavigation::Universal
+	 * Hook: SkinTemplateNavigation
 	 * @since 2013.06
 	 * @param Skin $skin
 	 * @param array &$tabs
@@ -1431,7 +1397,7 @@ class PageTranslationHooks {
 		RevisionRecord $revisionRecord
 	) {
 		$user = User::newFromIdentity( $userIdentity );
-		// MoveTranslatableBundleJob takes care of handling updates because it performs
+		// TranslatableBundleMoveJob takes care of handling updates because it performs
 		// a lot of moves at once. As a performance optimization, skip this hook if
 		// we detect moves from that job. As there isn't a good way to pass information
 		// to this hook what originated the move, we use some heuristics.
@@ -1486,32 +1452,14 @@ class PageTranslationHooks {
 	 * @param Content $content
 	 * @param ManualLogEntry $logEntry
 	 */
-	public static function onDeleteTranslationUnit(
-		WikiPage $unit,
-		User $user,
-		$reason,
-		$id,
-		$content,
-		$logEntry
+	public static function onDeleteTranslationUnit( WikiPage $unit, User $user, $reason,
+		$id, $content, $logEntry
 	) {
 		// Do the update. In case job queue is doing the work, the update is not done here
 		if ( self::$jobQueueRunning ) {
 			return;
 		}
-
 		$title = $unit->getTitle();
-
-		static $dependentPagesQueued = [];
-		$bundleFactory = Services::getInstance()->getTranslatableBundleFactory();
-		if ( $bundleFactory->getBundle( $title ) ) {
-			$dependentPagesQueued[ $title->getPrefixedText() ] = true;
-			return;
-		}
-
-		if ( TranslatablePage::isTranslationPage( $title ) ) {
-			$dependentPagesQueued[ $title->getPrefixedText() ] = true;
-			return;
-		}
 
 		$handle = new MessageHandle( $title );
 		if ( !$handle->isValid() ) {
@@ -1533,43 +1481,19 @@ class PageTranslationHooks {
 		static $queuedPages = [];
 		$target = $group->getTitle();
 		$langCode = $handle->getCode();
-		$targetTranslationPage = $target->getSubpage( $langCode )->getPrefixedText();
+		$targetPage = $target->getSubpage( $langCode )->getPrefixedText();
 
-		// An update for this translation page is already queued
-		if ( isset( $queuedPages[ $targetTranslationPage ] ) ) {
+		if ( isset( $queuedPages[ $targetPage ] ) ) {
 			return;
 		}
 
-		$queuedPages[ $targetTranslationPage ] = true;
+		$queuedPages[ $targetPage ] = true;
 		$fname = __METHOD__;
 
 		$dbw = wfGetDB( DB_PRIMARY );
 		$callback = function () use (
-			$dbw,
-			$queuedPages,
-			$targetTranslationPage,
-			$target,
-			$handle,
-			$langCode,
-			$user,
-			$reason,
-			$fname,
-			$dependentPagesQueued
+			$dbw, $queuedPages, $targetPage, $target, $handle, $langCode, $user, $reason, $fname
 		) {
-			// If the translation page or the translatable page that the translation unit belongs to has been
-			// deleted in this transaction, there is no need to update the translation pages. See: T291724
-			$translatableBundleDeleted = $dependentPagesQueued[ $target->getPrefixedText() ] ?? false;
-			$translationPageDeleted = $dependentPagesQueued[ $targetTranslationPage ] ?? false;
-			if ( $translatableBundleDeleted || $translationPageDeleted ) {
-				return;
-			}
-
-			// Do a more thorough check for the translation page in case the translation page is deleted in a
-			// different transaction.
-			if ( !$target->getSubpage( $langCode )->exists() ) {
-				return;
-			}
-
 			$dbw->startAtomic( $fname );
 
 			$page = TranslatablePage::newFromTitle( $target );
@@ -1582,15 +1506,13 @@ class PageTranslationHooks {
 
 			if ( !$handle->isDoc() ) {
 				// Assume that $user and $reason for the first deletion is the same for all
-				self::updateTranslationPage(
-					$page, $langCode, $user, 0, $reason, TranslateRenderJob::ACTION_DELETE
-				);
+				self::updateTranslationPage( $page, $langCode, $user, 0, $reason );
 			}
 
 			// If a unit was deleted after the edit here is done, this allows us
 			// to add the page back to the queue again and so we can make another
 			// edit here with the latest changes.
-			unset( $queuedPages[ $targetTranslationPage ] );
+			unset( $queuedPages[ $targetPage ] );
 
 			$dbw->endAtomic( $fname );
 		};

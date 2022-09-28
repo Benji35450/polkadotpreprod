@@ -6,15 +6,14 @@ namespace MediaWiki\Extension\Translate\TranslatorInterface\Aid;
 use Exception;
 use IContextSource;
 use MediaWiki\Extension\Translate\Services;
-use MediaWiki\Extension\Translate\TranslatorInterface\TranslationHelperException;
 use MediaWiki\Extension\Translate\TtmServer\TtmServerFactory;
-use MediaWiki\Extension\Translate\WebService\RemoteTTMServerWebService;
-use MediaWiki\Extension\Translate\WebService\TranslationWebService;
 use MessageGroup;
 use MessageHandle;
 use ReadableTTMServer;
+use RemoteTTMServerWebService;
 use Title;
 use TranslateUtils;
+use TranslationWebService;
 use TTMServer;
 
 /**
@@ -67,8 +66,6 @@ class TTMServerAid extends QueryAggregatorAwareTranslationAid {
 		foreach ( $this->getInternalServices() as $name => $service ) {
 			try {
 				$queryData = $service->query( $from, $to, $text );
-			} catch ( TranslationHelperException $e ) {
-				throw $e;
 			} catch ( Exception $e ) {
 				// Not ideal to catch all exceptions
 				continue;
@@ -115,7 +112,7 @@ class TTMServerAid extends QueryAggregatorAwareTranslationAid {
 				'local' => $local,
 			] );
 
-			// TtmServerActionApi expands this... need to fix it again to be the bare name
+			// ApiTTMServer expands this... need to fix it again to be the bare name
 			if ( $local ) {
 				$pagename = urldecode( substr( $item['location'], $localPrefixLength ) );
 				$item['location'] = $pagename;

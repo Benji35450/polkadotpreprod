@@ -5,7 +5,7 @@ namespace MediaWiki\Extension\Translate\Statistics;
 
 use FormOptions;
 use Html;
-use MediaWiki\Extension\Translate\Utilities\JsSelectToInput;
+use JsSelectToInput;
 use MessageGroup;
 use MessageGroups;
 use SpecialPage;

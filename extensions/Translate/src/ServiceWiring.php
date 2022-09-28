@@ -10,13 +10,6 @@
 use MediaWiki\Config\ServiceOptions;
 use MediaWiki\Extension\Translate\Cache\PersistentCache;
 use MediaWiki\Extension\Translate\Cache\PersistentDatabaseCache;
-use MediaWiki\Extension\Translate\MessageBundleTranslation\MessageBundleStore;
-use MediaWiki\Extension\Translate\MessageGroupProcessing\CsvTranslationImporter;
-use MediaWiki\Extension\Translate\MessageGroupProcessing\MessageGroupReview;
-use MediaWiki\Extension\Translate\MessageGroupProcessing\RevTagStore;
-use MediaWiki\Extension\Translate\MessageGroupProcessing\SubpageListBuilder;
-use MediaWiki\Extension\Translate\MessageGroupProcessing\TranslatableBundleFactory;
-use MediaWiki\Extension\Translate\MessageGroupProcessing\TranslatablePageStore;
 use MediaWiki\Extension\Translate\PageTranslation\TranslatableBundleMover;
 use MediaWiki\Extension\Translate\PageTranslation\TranslatablePageParser;
 use MediaWiki\Extension\Translate\PageTranslation\TranslationUnitStoreFactory;
@@ -41,14 +34,17 @@ return [
 		return new ConfigHelper();
 	},
 
-	'Translate:CsvTranslationImporter' => static function ( MediaWikiServices $services ): CsvTranslationImporter {
-		return new CsvTranslationImporter( $services->getWikiPageFactory() );
-	},
-
 	'Translate:EntitySearch' => static function ( MediaWikiServices $services ): EntitySearch {
+		// BC for MW <= 1.36
+		if ( method_exists( $services, 'getCollationFactory' ) ) {
+			$collation = $services->getCollationFactory()->makeCollation( 'uca-default-u-kn' );
+		} else {
+			$collation = Collation::factory( 'uca-default-u-kn' );
+		}
+
 		return new EntitySearch(
 			$services->getMainWANObjectCache(),
-			$services->getCollationFactory()->makeCollation( 'uca-default-u-kn' ),
+			$collation,
 			MessageGroups::singleton(),
 			$services->getNamespaceInfo(),
 			$services->get( 'Translate:MessageIndex' ),
@@ -63,7 +59,7 @@ return [
 		return new ExternalMessageSourceStateImporter(
 			$services->getMainConfig(),
 			$services->get( 'Translate:GroupSynchronizationCache' ),
-			$services->getJobQueueGroup(),
+			TranslateUtils::getJobQueueGroup(),
 			LoggerFactory::getInstance( 'Translate.GroupSynchronization' ),
 			MessageIndex::singleton()
 		);
@@ -73,22 +69,6 @@ return [
 		MediaWikiServices $services
 	): GroupSynchronizationCache {
 		return new GroupSynchronizationCache( $services->get( 'Translate:PersistentCache' ) );
-	},
-
-	'Translate:MessageBundleStore' => static function ( MediaWikiServices $services ): MessageBundleStore {
-		return new MessageBundleStore(
-			new RevTagStore(),
-			$services->getJobQueueGroup(),
-			$services->getLanguageNameUtils(),
-			$services->get( 'Translate:MessageIndex' )
-		);
-	},
-
-	'Translate:MessageGroupReview' => static function ( MediaWikiServices $services ): MessageGroupReview {
-		return new MessageGroupReview(
-			$services->getDBLoadBalancer(),
-			$services->getHookContainer()
-		);
 	},
 
 	'Translate:MessageIndex' => static function ( MediaWikiServices $services ): MessageIndex {
@@ -121,30 +101,12 @@ return [
 		);
 	},
 
-	'Translate:SubpageListBuilder' => static function ( MediaWikiServices $services ): SubpageListBuilder
-	{
-		return new SubpageListBuilder(
-			$services->get( 'Translate:TranslatableBundleFactory' ),
-			$services->getLinkBatchFactory()
-		);
-	},
-
-	'Translate:TranslatableBundleFactory' => static function ( MediaWikiServices $services ): TranslatableBundleFactory
-	{
-		return new TranslatableBundleFactory(
-			$services->get( 'Translate:TranslatablePageStore' ),
-			$services->get( 'Translate:MessageBundleStore' )
-		);
-	},
-
 	'Translate:TranslatableBundleMover' => static function ( MediaWikiServices $services ): TranslatableBundleMover
 	{
 		return new TranslatableBundleMover(
 			$services->getMovePageFactory(),
-			$services->getJobQueueGroup(),
+			TranslateUtils::getJobQueueGroup(),
 			$services->getLinkBatchFactory(),
-			$services->get( 'Translate:TranslatableBundleFactory' ),
-			$services->get( 'Translate:SubpageListBuilder' ),
 			$services->getMainConfig()->get( 'TranslatePageMoveLimit' )
 		);
 	},
@@ -153,16 +115,6 @@ return [
 	{
 		return new TranslatablePageParser(
 			$services->get( 'Translate:ParsingPlaceholderFactory' )
-		);
-	},
-
-	'Translate:TranslatablePageStore' => static function ( MediaWikiServices $services ): TranslatablePageStore
-	{
-		return new TranslatablePageStore(
-			$services->get( 'Translate:MessageIndex' ),
-			$services->getJobQueueGroup(),
-			new RevTagStore(),
-			$services->getDBLoadBalancer()
 		);
 	},
 
@@ -199,7 +151,7 @@ return [
 		return new TranslatorActivity(
 			$services->getMainObjectStash(),
 			$query,
-			$services->getJobQueueGroup()
+			TranslateUtils::getJobQueueGroup()
 		);
 	},
 

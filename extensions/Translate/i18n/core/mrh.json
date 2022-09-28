@@ -2,11 +2,9 @@
 	"@metadata": {
 		"authors": [
 			"Laitei",
-			"Reihpaleituh",
-			"Teitei Para"
+			"Reihpaleituh"
 		]
 	},
 	"translate-smg-strong-sync-help": "Baona",
-	"translate-documentation-language": "Mesei châhnarahvozy",
-	"log-action-filter-translationreview": "Taohriana pho:"
+	"translate-documentation-language": "Mesei châhnarahvozy"
 }

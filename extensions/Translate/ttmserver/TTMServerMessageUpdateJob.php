@@ -8,7 +8,6 @@
  */
 
 use MediaWiki\Logger\LoggerFactory;
-use MediaWiki\MediaWikiServices;
 
 /**
  * Job for updating translation memory.
@@ -43,8 +42,12 @@ class TTMServerMessageUpdateJob extends Job {
 	 * between 8 and 33 minutes.
 	 */
 	protected const WRITE_BACKOFF_EXPONENT = 7;
-	/** @var JobQueueGroup */
-	private $jobQueueGroup;
+
+	/**
+	 * The maximum amount of time jobs delayed due to frozen services can remain
+	 * in the job queue.
+	 */
+	public const DROP_DELAYED_JOBS_AFTER = 86400; // 60 * 60 * 24 * 1;
 
 	/**
 	 * @param MessageHandle $handle
@@ -69,10 +72,10 @@ class TTMServerMessageUpdateJob extends Job {
 				'command' => 'rebuild',
 				'service' => null,
 				'errorCount' => 0,
+				'createdAt' => time(),
+				'retryCount' => 0,
 			]
 		);
-
-		$this->jobQueueGroup = MediaWikiServices::getInstance()->getJobQueueGroup();
 	}
 
 	/**
@@ -146,7 +149,11 @@ class TTMServerMessageUpdateJob extends Job {
 		}
 
 		try {
-			$this->runCommand( $ttmserver );
+			if ( $ttmserver->isFrozen() ) {
+				$this->requeueRetry( $serviceName );
+			} else {
+				$this->runCommand( $ttmserver );
+			}
 		} catch ( Exception $e ) {
 			$this->requeueError( $serviceName, $e );
 		}
@@ -196,11 +203,48 @@ class TTMServerMessageUpdateJob extends Job {
 	}
 
 	/**
+	 * Re-queue job that is frozen, or drop the job if it has
+	 * been frozen for too long.
+	 *
+	 * @param string $serviceName
+	 */
+	private function requeueRetry( $serviceName ) {
+		$diff = time() - $this->params['createdAt'];
+		$dropTimeout = self::DROP_DELAYED_JOBS_AFTER;
+		if ( $diff > $dropTimeout ) {
+			LoggerFactory::getInstance( 'TTMServerUpdates' )->warning(
+				'Dropping delayed job {command} for service {service} ' .
+				'after waiting {diff}s',
+				[
+					'command' => $this->params['command'],
+					'service' => $serviceName,
+					'diff' => $diff,
+				]
+			);
+		} else {
+			$delay = self::backoffDelay( $this->params['retryCount'] );
+			$job = clone $this;
+			$job->params['retryCount']++;
+			$job->params['service'] = $serviceName;
+			$job->setDelay( $delay );
+			LoggerFactory::getInstance( 'TTMServerUpdates' )->debug(
+				'Service {service} reported frozen. ' .
+				'Requeueing job with delay of {delay}s',
+				[
+					'service' => $serviceName,
+					'delay' => $delay
+				]
+			);
+			$this->resend( $job );
+		}
+	}
+
+	/**
 	 * Extracted for testing purpose
 	 * @param self $job
 	 */
 	protected function resend( self $job ) {
-		$this->jobQueueGroup->push( $job );
+		TranslateUtils::getJobQueueGroup()->push( $job );
 	}
 
 	private function runCommand( WritableTTMServer $ttmserver ) {
@@ -241,7 +285,7 @@ class TTMServerMessageUpdateJob extends Job {
 
 	private function updateMessage( WritableTTMServer $ttmserver, MessageHandle $handle ) {
 		// Base page update, e.g. group change. Update everything.
-		$translations = TranslateUtils::getTranslations( $handle );
+		$translations = ApiQueryMessageTranslations::getTranslations( $handle );
 		foreach ( $translations as $page => $data ) {
 			$tTitle = Title::makeTitle( $this->title->getNamespace(), $page );
 			$tHandle = new MessageHandle( $tTitle );
@@ -274,7 +318,7 @@ class TTMServerMessageUpdateJob extends Job {
 	 * @param int $delay seconds to delay this job if possible
 	 */
 	public function setDelay( $delay ) {
-		$jobQueue = $this->jobQueueGroup->get( $this->getType() );
+		$jobQueue = TranslateUtils::getJobQueueGroup()->get( $this->getType() );
 		if ( !$delay || !$jobQueue->delayedJobsEnabled() ) {
 			return;
 		}
@@ -287,15 +331,15 @@ class TTMServerMessageUpdateJob extends Job {
 	}
 
 	/**
-	 * @param int $errorCount The number of times the job has errored out.
+	 * @param int $retryCount The number of times the job has errored out.
 	 * @return int Number of seconds to delay. With the default minimum exponent
 	 * of 6 the possible return values are 64, 128, 256, 512 and 1024 giving a
 	 * maximum delay of 17 minutes.
 	 */
-	public static function backoffDelay( $errorCount ) {
+	public static function backoffDelay( $retryCount ) {
 		return ceil( pow(
 			2,
-			static::WRITE_BACKOFF_EXPONENT + rand( 0, min( $errorCount, 4 ) )
+			static::WRITE_BACKOFF_EXPONENT + rand( 0, min( $retryCount, 4 ) )
 		) );
 	}
 }

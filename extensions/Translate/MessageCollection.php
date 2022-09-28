@@ -907,15 +907,15 @@ class MessageCollection implements ArrayAccess, Iterator, Countable {
 	 * @param mixed $offset
 	 * @return bool
 	 */
-	public function offsetExists( $offset ): bool {
+	public function offsetExists( $offset ) {
 		return isset( $this->keys[$offset] );
 	}
 
 	/**
 	 * @param mixed $offset
-	 * @return ?TMessage
+	 * @return mixed
 	 */
-	public function offsetGet( $offset ): ?TMessage {
+	public function offsetGet( $offset ) {
 		return $this->messages[$offset] ?? null;
 	}
 
@@ -923,12 +923,12 @@ class MessageCollection implements ArrayAccess, Iterator, Countable {
 	 * @param mixed $offset
 	 * @param mixed $value
 	 */
-	public function offsetSet( $offset, $value ): void {
+	public function offsetSet( $offset, $value ) {
 		$this->messages[$offset] = $value;
 	}
 
 	/** @param mixed $offset */
-	public function offsetUnset( $offset ): void {
+	public function offsetUnset( $offset ) {
 		unset( $this->keys[$offset] );
 	}
 
@@ -960,11 +960,10 @@ class MessageCollection implements ArrayAccess, Iterator, Countable {
 	/**
 	 * Iterator method. @{
 	 */
-	public function rewind(): void {
+	public function rewind() {
 		reset( $this->keys );
 	}
 
-	#[\ReturnTypeWillChange]
 	public function current() {
 		if ( !count( $this->keys ) ) {
 			return false;
@@ -974,19 +973,19 @@ class MessageCollection implements ArrayAccess, Iterator, Countable {
 		return $this->messages[key( $this->keys )];
 	}
 
-	public function key(): ?string {
+	public function key() {
 		return key( $this->keys );
 	}
 
-	public function next(): void {
+	public function next() {
 		next( $this->keys );
 	}
 
-	public function valid(): bool {
+	public function valid() {
 		return isset( $this->messages[key( $this->keys )] );
 	}
 
-	public function count(): int {
+	public function count() {
 		return count( $this->keys() );
 	}
 

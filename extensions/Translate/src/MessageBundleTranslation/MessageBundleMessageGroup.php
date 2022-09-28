@@ -188,7 +188,7 @@ class MessageBundleMessageGroup implements MessageGroup {
 
 	/** @inheritDoc */
 	public function getSourceLanguage(): string {
-		return Title::newFromText( $this->name )->getPageLanguage()->getCode();
+		return Title::newFromID( $this->pageId )->getPageLanguage()->getCode();
 	}
 
 	/** @inheritDoc */

@@ -316,7 +316,7 @@
 	"tux-save-unknown-error": "Dogodila se nepoznata pogreška.",
 	"tux-editor-placeholder-documentation": "Dodaj dokumentaciju poruke",
 	"tux-editor-placeholder-language": "Vaš prijevod na $1",
-	"tux-editor-editsummary-placeholder": "Opišite Vaše izmjene (neobvezno)",
+	"tux-editor-editsummary-placeholder": "Neobvezan sažetak",
 	"tux-editor-paste-original-button-label": "Zalijepi izvorni tekst",
 	"tux-editor-discard-changes-button-label": "Zanemari izmjene",
 	"tux-editor-save-button-label": "Objavi prijevod",
@@ -328,9 +328,6 @@
 	"tux-editor-edit-desc": "Uredi dokumentaciju",
 	"tux-editor-add-desc": "Dodaj dokumentaciju",
 	"tux-editor-suggestions-title": "Prijedlozi",
-	"tux-editor-latest-updates-title": "Zadnja ažuriranja",
-	"tux-editor-changes-without-summary": "$1 {{PLURAL:$1|ažuriranje|ažuriranja}} bez sažetka",
-	"tux-editor-all-changes": "Sve izmjene",
 	"tux-editor-in-other-languages": "Na drugim jezicima",
 	"tux-editor-need-more-help": "Trebate pomoć?",
 	"tux-editor-ask-help": "Zatražite više informacija",
@@ -396,6 +393,5 @@
 	"translate-syntax-error": "Prijevod sadrži sintaksne greške",
 	"tux-session-expired": "Više niste prijavljeni. Molimo Vas, prijavite se u zasebnoj kartici. Druga mogućnost je da načinite kopije nesačuvanih prijevoda, prijavite se, a potle vratite na ovu stranicu i ponovo unesete svoje prijevode.",
 	"tux-nojs": "Ovaj alat ne radi bez JavaScripta. Javascript je onemogućen, ne radi ili je preglednik nepodržan.",
-	"specialpages-group-translation": "Prevođenje",
-	"translate-messagebundle-error-invalid-sourcelanguage": "Izvorni jezični kôd \"$1\" nije podržan."
+	"specialpages-group-translation": "Prevođenje"
 }

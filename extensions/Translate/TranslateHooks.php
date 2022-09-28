@@ -9,18 +9,15 @@
 
 use MediaWiki\Config\ServiceOptions;
 use MediaWiki\Extension\AbuseFilter\Variables\VariableHolder;
-use MediaWiki\Extension\Translate\MessageGroupProcessing\DeleteTranslatableBundleJob;
-use MediaWiki\Extension\Translate\MessageGroupProcessing\MoveTranslatableBundleJob;
-use MediaWiki\Extension\Translate\PageTranslation\DeleteTranslatableBundleSpecialPage;
+use MediaWiki\Extension\Translate\PageTranslation\DeleteTranslatablePageSpecialPage;
 use MediaWiki\Extension\Translate\PageTranslation\MigrateTranslatablePageSpecialPage;
 use MediaWiki\Extension\Translate\PageTranslation\PageTranslationSpecialPage;
 use MediaWiki\Extension\Translate\PageTranslation\PrepareTranslatablePageSpecialPage;
 use MediaWiki\Extension\Translate\SystemUsers\FuzzyBot;
 use MediaWiki\Extension\Translate\SystemUsers\TranslateUserManager;
 use MediaWiki\Extension\Translate\TranslatorSandbox\ManageTranslatorSandboxSpecialPage;
-use MediaWiki\Extension\Translate\TranslatorSandbox\TranslationStashActionApi;
 use MediaWiki\Extension\Translate\TranslatorSandbox\TranslationStashSpecialPage;
-use MediaWiki\Extension\Translate\TranslatorSandbox\TranslatorSandboxActionApi;
+use MediaWiki\Hook\BeforeParserFetchTemplateRevisionRecordHook;
 use MediaWiki\MediaWikiServices;
 use MediaWiki\Revision\Hook\RevisionRecordInsertedHook;
 use MediaWiki\Revision\RevisionLookup;
@@ -87,18 +84,14 @@ class TranslateHooks implements RevisionRecordInsertedHook {
 					'LanguageFactory',
 					'Translate:TranslationUnitStoreFactory',
 					'Translate:TranslatablePageParser',
-					'LinkBatchFactory',
-					'JobQueueGroup',
+					'LinkBatchFactory'
 				]
 			];
 			$wgSpecialPages['PageTranslationDeletePage'] = [
-				'class' => DeleteTranslatableBundleSpecialPage::class,
+				'class' => DeleteTranslatablePageSpecialPage::class,
 				'services' => [
 					'MainObjectStash',
-					'PermissionManager',
-					'Translate:TranslatableBundleFactory',
-					'Translate:SubpageListBuilder',
-					'JobQueueGroup',
+					'PermissionManager'
 				]
 			];
 
@@ -118,20 +111,20 @@ class TranslateHooks implements RevisionRecordInsertedHook {
 			// logentry-pagetranslation-discourage logentry-pagetranslation-prioritylanguages
 			// logentry-pagetranslation-associate logentry-pagetranslation-dissociate
 			$wgLogTypes[] = 'pagetranslation';
-			$wgLogActionsHandlers['pagetranslation/mark'] = 'TranslatableBundleLogFormatter';
-			$wgLogActionsHandlers['pagetranslation/unmark'] = 'TranslatableBundleLogFormatter';
-			$wgLogActionsHandlers['pagetranslation/moveok'] = 'TranslatableBundleLogFormatter';
-			$wgLogActionsHandlers['pagetranslation/movenok'] = 'TranslatableBundleLogFormatter';
-			$wgLogActionsHandlers['pagetranslation/deletelok'] = 'TranslatableBundleLogFormatter';
-			$wgLogActionsHandlers['pagetranslation/deletefok'] = 'TranslatableBundleLogFormatter';
-			$wgLogActionsHandlers['pagetranslation/deletelnok'] = 'TranslatableBundleLogFormatter';
-			$wgLogActionsHandlers['pagetranslation/deletefnok'] = 'TranslatableBundleLogFormatter';
-			$wgLogActionsHandlers['pagetranslation/encourage'] = 'TranslatableBundleLogFormatter';
-			$wgLogActionsHandlers['pagetranslation/discourage'] = 'TranslatableBundleLogFormatter';
+			$wgLogActionsHandlers['pagetranslation/mark'] = 'PageTranslationLogFormatter';
+			$wgLogActionsHandlers['pagetranslation/unmark'] = 'PageTranslationLogFormatter';
+			$wgLogActionsHandlers['pagetranslation/moveok'] = 'PageTranslationLogFormatter';
+			$wgLogActionsHandlers['pagetranslation/movenok'] = 'PageTranslationLogFormatter';
+			$wgLogActionsHandlers['pagetranslation/deletelok'] = 'PageTranslationLogFormatter';
+			$wgLogActionsHandlers['pagetranslation/deletefok'] = 'PageTranslationLogFormatter';
+			$wgLogActionsHandlers['pagetranslation/deletelnok'] = 'PageTranslationLogFormatter';
+			$wgLogActionsHandlers['pagetranslation/deletefnok'] = 'PageTranslationLogFormatter';
+			$wgLogActionsHandlers['pagetranslation/encourage'] = 'PageTranslationLogFormatter';
+			$wgLogActionsHandlers['pagetranslation/discourage'] = 'PageTranslationLogFormatter';
 			$wgLogActionsHandlers['pagetranslation/prioritylanguages'] =
-				'TranslatableBundleLogFormatter';
-			$wgLogActionsHandlers['pagetranslation/associate'] = 'TranslatableBundleLogFormatter';
-			$wgLogActionsHandlers['pagetranslation/dissociate'] = 'TranslatableBundleLogFormatter';
+				'PageTranslationLogFormatter';
+			$wgLogActionsHandlers['pagetranslation/associate'] = 'PageTranslationLogFormatter';
+			$wgLogActionsHandlers['pagetranslation/dissociate'] = 'PageTranslationLogFormatter';
 			$wgActionFilteredLogs['pagetranslation'] = [
 				'mark' => [ 'mark' ],
 				'unmark' => [ 'unmark' ],
@@ -143,26 +136,14 @@ class TranslateHooks implements RevisionRecordInsertedHook {
 				'aggregategroups' => [ 'associate', 'dissociate' ],
 			];
 
-			$wgLogTypes[] = 'messagebundle';
-			$wgLogActionsHandlers['messagebundle/moveok'] = 'TranslatableBundleLogFormatter';
-			$wgLogActionsHandlers['messagebundle/movenok'] = 'TranslatableBundleLogFormatter';
-			$wgLogActionsHandlers['messagebundle/deletefok'] = 'TranslatableBundleLogFormatter';
-			$wgLogActionsHandlers['messagebundle/deletefnok'] = 'TranslatableBundleLogFormatter';
-			$wgActionFilteredLogs['messagebundle'] = [
-				'move' => [ 'moveok', 'movenok' ],
-				'delete' => [ 'deletefok', 'deletefnok' ],
-			];
-
 			global $wgJobClasses;
 			$wgJobClasses['TranslateRenderJob'] = 'TranslateRenderJob';
 			$wgJobClasses['RenderJob'] = 'TranslateRenderJob';
-			// Remove after MLEB 2022.07 release
-			$wgJobClasses['TranslatableBundleMoveJob'] = MoveTranslatableBundleJob::class;
-			$wgJobClasses['MoveTranslatableBundleJob'] = MoveTranslatableBundleJob::class;
-			// Remove after MLEB 2022.07 release
-			$wgJobClasses['TranslatableBundleDeleteJob'] = DeleteTranslatableBundleJob::class;
-			$wgJobClasses['DeleteTranslatableBundleJob'] = DeleteTranslatableBundleJob::class;
-
+			// Remove after MLEB 2022.04 release
+			$wgJobClasses['TranslatablePageMoveJob'] = 'TranslatableBundleMoveJob';
+			$wgJobClasses['TranslatableBundleMoveJob'] = 'TranslatableBundleMoveJob';
+			$wgJobClasses['TranslateDeleteJob'] = 'TranslateDeleteJob';
+			$wgJobClasses['DeleteJob'] = 'TranslateDeleteJob';
 			$wgJobClasses['TranslationsUpdateJob'] = 'TranslationsUpdateJob';
 
 			// Namespaces
@@ -207,8 +188,10 @@ class TranslateHooks implements RevisionRecordInsertedHook {
 			$wgHooks['ParserOutputPostCacheTransform'][] =
 				'PageTranslationHooks::onParserOutputPostCacheTransform';
 
-			$wgHooks['BeforeParserFetchTemplateRevisionRecord'][] =
-				'PageTranslationHooks::fetchTranslatableTemplateAndTitle';
+			if ( interface_exists( BeforeParserFetchTemplateRevisionRecordHook::class ) ) {
+				$wgHooks['BeforeParserFetchTemplateRevisionRecord'][] =
+					'PageTranslationHooks::fetchTranslatableTemplateAndTitle';
+			}
 
 			// Set the page content language
 			$wgHooks['PageContentLanguage'][] = 'PageTranslationHooks::onPageContentLanguage';
@@ -238,7 +221,7 @@ class TranslateHooks implements RevisionRecordInsertedHook {
 			$wgHooks['SkinSubPageSubtitle'][] = 'PageTranslationHooks::replaceSubtitle';
 
 			// Replaced edit tab with translation tab for translation pages
-			$wgHooks['SkinTemplateNavigation::Universal'][] = 'PageTranslationHooks::translateTab';
+			$wgHooks['SkinTemplateNavigation'][] = 'PageTranslationHooks::translateTab';
 
 			// Update translated page when translation unit is moved
 			$wgHooks['PageMoveComplete'][] = 'PageTranslationHooks::onMovePageTranslationUnits';
@@ -305,31 +288,8 @@ class TranslateHooks implements RevisionRecordInsertedHook {
 			$wgJobClasses['TranslateSandboxEmailJob'] = 'TranslateSandboxEmailJob';
 
 			global $wgAPIModules;
-			$wgAPIModules['translationstash'] = [
-				'class' => TranslationStashActionApi::class,
-				'services' => [
-					'DBLoadBalancer',
-					'UserFactory'
-				]
-			];
-			$wgAPIModules['translatesandbox'] = [
-				'class' => TranslatorSandboxActionApi::class,
-				'services' => [
-						'UserFactory',
-						'UserNameUtils',
-						'UserOptionsManager',
-						'WikiPageFactory',
-						'UserOptionsLookup'
-				],
-				'args' => [
-					static function () {
-						return new ServiceOptions(
-							TranslatorSandboxActionApi::CONSTRUCTOR_OPTIONS,
-							MediaWikiServices::getInstance()->getMainConfig()
-						);
-					}
-				]
-			];
+			$wgAPIModules['translationstash'] = 'ApiTranslationStash';
+			$wgAPIModules['translatesandbox'] = 'ApiTranslateSandbox';
 		}
 
 		global $wgNamespaceRobotPolicies;
@@ -457,6 +417,27 @@ class TranslateHooks implements RevisionRecordInsertedHook {
 				'translate_sections',
 				"{$dir}/{$dbType}/translate_sections.sql"
 			);
+			$updater->addExtensionUpdate( [
+				'addField',
+				'translate_sections',
+				'trs_order',
+				"$dir/translate_sections-trs_order.patch.sql",
+				true
+			] );
+			$updater->addExtensionUpdate( [
+				'addIndex',
+				'translate_sections',
+				'trs_page_order',
+				"$dir/translate_sections-indexchange.sql",
+				true
+			] );
+			$updater->addExtensionUpdate( [
+				'dropIndex',
+				'translate_sections',
+				'trs_page',
+				"$dir/translate_sections-indexchange2.sql",
+				true
+			] );
 			$updater->addExtensionTable(
 				'revtag',
 				"{$dir}/{$dbType}/revtag.sql"
@@ -485,12 +466,26 @@ class TranslateHooks implements RevisionRecordInsertedHook {
 				'translate_messageindex',
 				"{$dir}/{$dbType}/translate_messageindex.sql"
 			);
+			$updater->addExtensionUpdate( [
+				'addIndex',
+				'translate_groupstats',
+				'tgs_lang',
+				"$dir/translate_groupstats-indexchange.sql",
+				true
+			] );
+			$updater->addExtensionUpdate( [
+				'addField', 'translate_groupstats',
+				'tgs_proofread',
+				"$dir/translate_groupstats-proofread.sql",
+				true
+			] );
+
 			$updater->addExtensionTable(
 				'translate_stash',
 				"{$dir}/{$dbType}/translate_stash.sql"
 			);
 
-			// 1.32 - This also adds a PRIMARY KEY
+			// This also adds a PRIMARY KEY
 			$updater->addExtensionUpdate( [
 				'renameIndex',
 				'translate_reviews',
@@ -507,7 +502,6 @@ class TranslateHooks implements RevisionRecordInsertedHook {
 			);
 
 			if ( $dbType === 'mysql' ) {
-				// 1.38
 				$updater->modifyExtensionField(
 					'translate_cache',
 					'tc_key',
@@ -621,10 +615,10 @@ class TranslateHooks implements RevisionRecordInsertedHook {
 		if ( TTMServer::primary() instanceof SearchableTTMServer ) {
 			$href = SpecialPage::getTitleFor( 'SearchTranslations' )
 				->getFullUrl( [ 'query' => $term ] );
-			$form = Html::successBox(
-				$search->msg( 'translate-searchprofile-note', $href )->parse(),
-				'plainlinks'
-			);
+			$wrapper = new RawMessage( '<div class="successbox plainlinks">$1</div>' );
+			$form = $wrapper
+				->params( $search->msg( 'translate-searchprofile-note', $href )->plain() )
+				->parse();
 
 			return false;
 		}
@@ -950,6 +944,8 @@ class TranslateHooks implements RevisionRecordInsertedHook {
 						]
 					]
 				) );
+				// @todo Remove this line after this extension do not support mediawiki version 1.36 and before
+				$status->value = EditPage::AS_HOOK_ERROR_EXPECTED;
 				return false;
 			}
 		}

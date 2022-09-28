@@ -6,6 +6,7 @@ namespace MediaWiki\Extension\Translate\Validation\Validators;
 use MediaWiki\Extension\Translate\Validation\MessageValidator;
 use MediaWiki\Extension\Translate\Validation\ValidationIssue;
 use MediaWiki\Extension\Translate\Validation\ValidationIssues;
+use Title;
 use TMessage;
 
 /**
@@ -54,8 +55,7 @@ class MediaWikiLinkValidator implements MessageValidator {
 	}
 
 	private function getLinksMissingInTarget( string $source, string $target ): array {
-		global $wgLegalTitleChars;
-		$tc = $wgLegalTitleChars . '#%{}';
+		$tc = Title::legalChars() . '#%{}';
 		$matches = $links = [];
 
 		preg_match_all( "/\[\[([{$tc}]+)(\\|(.+?))?]]/sDu", $source, $matches );

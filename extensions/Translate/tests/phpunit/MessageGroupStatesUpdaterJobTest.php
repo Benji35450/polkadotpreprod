@@ -1,13 +1,10 @@
 <?php
 
-use MediaWiki\Extension\Translate\MessageGroupProcessing\GroupReviewActionApi;
-use MediaWiki\MediaWikiServices;
-
 /**
  * @group Database
  * @group medium
  */
-class MessageGroupStatesUpdaterJobTest extends ApiTestCase {
+class MessageGroupStatesUpdaterJobTest extends MediaWikiIntegrationTestCase {
 	protected function setUp(): void {
 		parent::setUp();
 		$this->setMwGlobals( [
@@ -110,59 +107,52 @@ class MessageGroupStatesUpdaterJobTest extends ApiTestCase {
 		$group = MessageGroups::getGroup( 'group-trans' );
 
 		// In the beginning...
-		$currentState = GroupReviewActionApi::getState( $group, 'fi' );
+		$currentState = ApiGroupReview::getState( $group, 'fi' );
 		$this->assertFalse( $currentState, 'groups start from unset state' );
 
 		// First translation
 		$title = Title::newFromText( 'MediaWiki:key1/fi' );
-		$page = $this->getServiceContainer()->getWikiPageFactory()->newFromTitle( $title );
+		$page = WikiPage::factory( $title );
 		$content = ContentHandler::makeContent( 'trans1', $title );
 
 		$status = $page->doUserEditContent( $content, $user, __METHOD__ );
 
 		self::translateRunJobs();
-		$currentState = GroupReviewActionApi::getState( $group, 'fi' );
+		$currentState = ApiGroupReview::getState( $group, 'fi' );
 		$this->assertEquals( 'inprogress', $currentState, 'in progress after first translation' );
 
 		// First review
-		$this->doApiRequestWithToken( [
-			'action' => 'translationreview',
-			'revision' => self::getRevisionRecordId( $status )
-		], null, $user );
-
+		ApiTranslationReview::doReview( $user, self::getRevisionRecord( $status ), __METHOD__ );
 		self::translateRunJobs();
-		$currentState = GroupReviewActionApi::getState( $group, 'fi' );
+		$currentState = ApiGroupReview::getState( $group, 'fi' );
 		$this->assertEquals( 'inprogress', $currentState, 'in progress while untranslated messages' );
 
 		// Second translation
 		$title = Title::newFromText( 'MediaWiki:key2/fi' );
-		$page = $this->getServiceContainer()->getWikiPageFactory()->newFromTitle( $title );
+		$page = WikiPage::factory( $title );
 		$content = ContentHandler::makeContent( 'trans2', $title );
 
 		$status = $page->doUserEditContent( $content, $user, __METHOD__ );
 
 		self::translateRunJobs();
-		$currentState = GroupReviewActionApi::getState( $group, 'fi' );
+		$currentState = ApiGroupReview::getState( $group, 'fi' );
 		$this->assertEquals( 'proofreading', $currentState, 'proofreading after second translation' );
 
 		// Second review
-		$this->doApiRequestWithToken( [
-			'action' => 'translationreview',
-			'revision' => self::getRevisionRecordId( $status )
-		], null, $user );
+		ApiTranslationReview::doReview( $user, self::getRevisionRecord( $status ), __METHOD__ );
 		self::translateRunJobs();
-		$currentState = GroupReviewActionApi::getState( $group, 'fi' );
+		$currentState = ApiGroupReview::getState( $group, 'fi' );
 		$this->assertEquals( 'ready', $currentState, 'ready when all proofread' );
 
 		// Change to translation
 		$title = Title::newFromText( 'MediaWiki:key1/fi' );
-		$page = $this->getServiceContainer()->getWikiPageFactory()->newFromTitle( $title );
+		$page = WikiPage::factory( $title );
 		$content = ContentHandler::makeContent( 'trans1 updated', $title );
 
 		$page->doUserEditContent( $content, $user, __METHOD__ );
 
 		self::translateRunJobs();
-		$currentState = GroupReviewActionApi::getState( $group, 'fi' );
+		$currentState = ApiGroupReview::getState( $group, 'fi' );
 		$this->assertEquals(
 			'proofreading',
 			$currentState,
@@ -170,16 +160,15 @@ class MessageGroupStatesUpdaterJobTest extends ApiTestCase {
 		);
 	}
 
-	protected static function getRevisionRecordId( Status $s ) {
+	protected static function getRevisionRecord( Status $s ) {
 		$value = $s->getValue();
 
-		return $value['revision-record']->getId();
+		return $value['revision-record'];
 	}
 
 	protected static function translateRunJobs() {
-		$jobQueueGroup = MediaWikiServices::getInstance()->getJobQueueGroup();
 		do {
-			$job = $jobQueueGroup->pop();
+			$job = TranslateUtils::getJobQueueGroup()->pop();
 			if ( !$job ) {
 				break;
 			}

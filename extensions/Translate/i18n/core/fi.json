@@ -142,6 +142,7 @@
 	"translate-statsf-days": "Aikaväli päivissä",
 	"translate-statsf-start": "Aloituspäivämäärä",
 	"translate-statsf-scale": "Mittaustarkkuus",
+	"translate-statsf-scale-years": "vuosi",
 	"translate-statsf-scale-months": "kuukausi",
 	"translate-statsf-scale-weeks": "viikko",
 	"translate-statsf-scale-days": "päivä",
@@ -335,7 +336,6 @@
 	"tux-editor-edit-desc": "Muokkaa ohjeistusta",
 	"tux-editor-add-desc": "Lisää ohjeistus",
 	"tux-editor-suggestions-title": "Ehdotukset",
-	"tux-editor-all-changes": "Kaikki muutokset",
 	"tux-editor-in-other-languages": "Muilla kielillä",
 	"tux-editor-need-more-help": "Tarvitsetko lisäapua?",
 	"tux-editor-ask-help": "Pyydä lisätietoja",
@@ -401,6 +401,5 @@
 	"translate-syntax-error": "Käännös sisältää syntaksivirheitä",
 	"tux-session-expired": "Et ole enää kirjautunut sisään. Kirjaudu sisään toisessä välilehdessä. Vaihtoehtoisesti voit kopioida tallentamattomat käännökset, kirjautua sisään ja palata tälle sivulle tallentamaan käännökset uudestaan.",
 	"tux-nojs": "Tämä työkalu ei toimi ilman JavaScriptiä. JavaScript on poistettu käytöstä, se ei toimi, tai tätä selainta ei tueta.",
-	"specialpages-group-translation": "Käännös",
-	"translate-messagebundle-change-sourcelanguage": "Viestinipun lähdekieli asetettu metatietojen perusteella."
+	"specialpages-group-translation": "Käännös"
 }

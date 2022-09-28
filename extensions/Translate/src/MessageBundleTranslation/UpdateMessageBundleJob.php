@@ -12,6 +12,7 @@ use MessageGroupStats;
 use MessageIndexRebuildJob;
 use MessageUpdateJob;
 use Title;
+use TranslateUtils;
 
 /**
  * @author Niklas Laxström
@@ -36,13 +37,10 @@ class UpdateMessageBundleJob extends Job {
 
 	/** @inheritDoc */
 	public function run(): void {
-		$mwInstance = MediaWikiServices::getInstance();
-		$lb = $mwInstance->getDBLoadBalancerFactory();
-		$jobQueue = $mwInstance->getJobQueueGroup();
+		$lb = MediaWikiServices::getInstance()->getDBLoadBalancerFactory();
 		$logger = LoggerFactory::getInstance( 'Translate.MessageBundle' );
 		$messageIndex = Services::getInstance()->getMessageIndex();
-
-		$logger->info( 'UpdateMessageBundleJob: Starting job for: ' . $this->getTitle()->getPrefixedText() );
+		$jobQueue = TranslateUtils::getJobQueueGroup();
 
 		// Not sure if this is necessary, but it should ensure that this job, which was created
 		// when a revision was saved, can read that revision from the replica. In addition, this
@@ -88,32 +86,16 @@ class UpdateMessageBundleJob extends Job {
 			$jobs[] = MessageUpdateJob::newJob( $title, $value, $fuzzy );
 		}
 		$jobQueue->push( $jobs );
-		$logger->info(
-			'UpdateMessageBundleJob: Added {number} MessageUpdateJobs to the job queue for: {title}',
-			[
-				'number' => count( $jobs ),
-				'title' => $name
-			]
-		);
 
 		// This is somewhat slow, so it has been postponed until now, but it's needed to
 		// make the group available for the message index rebuild.
 		MessageGroups::singleton()->recache();
-
-		$logger->info(
-			'UpdateMessageBundleJob: {title}: Recaching message groups',
-			[ 'title' => $name ]
-		);
 
 		// Schedule message index update. Thanks to front caching, it is okay if this takes
 		// a while (and on large wikis it does take a while!). Running it as a separate job
 		// also allows de-duplication.
 		$job = MessageIndexRebuildJob::newJob();
 		$jobQueue->push( $job );
-		$logger->info(
-			'UpdateMessageBundleJob: {title}: Queue MessageIndexRebuildJob',
-			[ 'title' => $name ]
-		);
 
 		// Refresh or fill translations statistics. If this a new group, this prevents
 		// calculating the stats on the fly during read requests. If an existing group, this

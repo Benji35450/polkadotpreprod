@@ -4,8 +4,6 @@
  * @file
  */
 
-use MediaWiki\MediaWikiServices;
-
 /**
  * A utility trait containing reusable methods for use in tests
  * @since 2020.04
@@ -44,7 +42,7 @@ trait TranslatablePageTestTrait {
 	): TranslatablePage {
 		// Create new page
 		$translatablePageTitle = Title::newFromText( $title );
-		$page = MediaWikiServices::getInstance()->getWikiPageFactory()->newFromTitle( $translatablePageTitle );
+		$page = WikiPage::factory( $translatablePageTitle );
 		$text = "<translate>$content</translate>";
 		$content = ContentHandler::makeContent( $text, $translatablePageTitle );
 		$translatablePage = TranslatablePage::newFromTitle( $translatablePageTitle );

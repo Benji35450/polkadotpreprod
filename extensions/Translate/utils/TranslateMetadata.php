@@ -31,7 +31,7 @@ class TranslateMetadata {
 		self::$cache += array_fill_keys( $missing, null ); // cache negatives
 
 		$dbr = TranslateUtils::getSafeReadDB();
-		$conds = count( $missing ) <= 500 ? [ 'tmd_group' => array_map( 'strval', $missing ) ] : [];
+		$conds = count( $missing ) <= 500 ? [ 'tmd_group' => $missing ] : [];
 		$res = $dbr->select(
 			'translate_metadata',
 			[ 'tmd_group', 'tmd_key', 'tmd_value' ],
@@ -214,38 +214,5 @@ class TranslateMetadata {
 		}
 
 		return $ret;
-	}
-
-	/**
-	 * @param string $oldGroupId
-	 * @param string $newGroupId
-	 * @param string[] $metadataKeysToMove
-	 * @return void
-	 */
-	public static function moveMetadata(
-		string $oldGroupId,
-		string $newGroupId,
-		array $metadataKeysToMove
-	): void {
-		self::preloadGroups( [ $oldGroupId, $newGroupId ], __METHOD__ );
-		foreach ( $metadataKeysToMove as $type ) {
-			$value = self::get( $oldGroupId, $type );
-			if ( $value !== false ) {
-				self::set( $oldGroupId, $type, false );
-				self::set( $newGroupId, $type, $value );
-			}
-		}
-	}
-
-	/**
-	 * @param string $groupId
-	 * @param string[] $metadataKeys
-	 * @return void
-	 */
-	public static function clearMetadata( string $groupId, array $metadataKeys ): void {
-		// remove the entries from metadata table.
-		foreach ( $metadataKeys as $type ) {
-			self::set( $groupId, $type, false );
-		}
 	}
 }

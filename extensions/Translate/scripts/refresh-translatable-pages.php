@@ -33,10 +33,7 @@ class RefreshTranslatablePages extends Maintenance {
 
 	public function execute() {
 		$groups = MessageGroups::singleton()->getGroups();
-		$mwInstance = MediaWikiServices::getInstance();
-		$lbFactory = $mwInstance->getDBLoadBalancerFactory();
-		$jobQueueGroup = $mwInstance->getJobQueueGroup();
-
+		$lbFactory = MediaWikiServices::getInstance()->getDBLoadBalancerFactory();
 		$counter = 0;
 		$useJobQueue = $this->hasOption( 'jobqueue' );
 
@@ -54,7 +51,7 @@ class RefreshTranslatablePages extends Maintenance {
 			$page = TranslatablePage::newFromTitle( $group->getTitle() );
 			$jobs = TranslationsUpdateJob::getRenderJobs( $page );
 			if ( $useJobQueue ) {
-				$jobQueueGroup->push( $jobs );
+				TranslateUtils::getJobQueueGroup()->push( $jobs );
 			} else {
 				foreach ( $jobs as $job ) {
 					$job->run();

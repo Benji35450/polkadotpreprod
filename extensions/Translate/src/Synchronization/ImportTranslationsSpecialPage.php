@@ -8,8 +8,10 @@ use FileBasedMessageGroup;
 use GettextFFS;
 use GettextParseException;
 use Html;
+use MediaWiki\MediaWikiServices;
 use MessageGroupBase;
 use MessageGroups;
+use MessageWebImporter;
 use SpecialPage;
 use Xml;
 
@@ -23,12 +25,9 @@ use Xml;
  * @ingroup SpecialPage TranslateSpecialPage
  */
 class ImportTranslationsSpecialPage extends SpecialPage {
-	/** @var BagOStuff */
-	private $cache;
-
-	public function __construct( BagOStuff $cache ) {
+	/** Set up and fill some dependencies. */
+	public function __construct() {
 		parent::__construct( 'ImportTranslations', 'translate-import' );
-		$this->cache = $cache;
 	}
 
 	public function doesWrites() {
@@ -58,8 +57,7 @@ class ImportTranslationsSpecialPage extends SpecialPage {
 			return;
 		}
 
-		$csrfTokenSet = $this->getContext()->getCsrfTokenSet();
-		if ( !$csrfTokenSet->matchTokenField( 'token' ) ) {
+		if ( !$this->getUser()->matchEditToken( $this->getRequest()->getVal( 'token' ) ) ) {
 			$this->getOutput()->addWikiMsg( 'session_fail_preview' );
 			$this->outputForm();
 
@@ -148,7 +146,7 @@ class ImportTranslationsSpecialPage extends SpecialPage {
 				'enctype' => 'multipart/form-data',
 				'id' => 'mw-translate-import',
 			] ) .
-				Html::hidden( 'token', $this->getContext()->getCsrfTokenSet()->getToken() ) .
+				Html::hidden( 'token', $this->getUser()->getEditToken() ) .
 				Html::hidden( 'title', $this->getPageTitle()->getPrefixedText() ) .
 				Xml::inputLabel(
 					$this->msg( 'translate-import-from-local' )->text(),
@@ -213,20 +211,27 @@ class ImportTranslationsSpecialPage extends SpecialPage {
 		return [ 'ok', $parseOutput ];
 	}
 
+	private function getCache(): BagOStuff {
+		return MediaWikiServices::getInstance()->getMainObjectStash();
+	}
+
 	private function setCachedData( $data ): void {
-		$key = $this->cache->makeKey( 'translate', 'webimport', $this->getUser()->getId() );
-		$this->cache->set( $key, $data, 60 * 30 );
+		$cache = $this->getCache();
+		$key = $cache->makeKey( 'translate', 'webimport', $this->getUser()->getId() );
+		$cache->set( $key, $data, 60 * 30 );
 	}
 
 	private function getCachedData() {
-		$key = $this->cache->makeKey( 'translate', 'webimport', $this->getUser()->getId() );
+		$cache = $this->getCache();
+		$key = $cache->makeKey( 'translate', 'webimport', $this->getUser()->getId() );
 
-		return $this->cache->get( $key );
+		return $cache->get( $key );
 	}
 
 	private function deleteCachedData(): bool {
-		$key = $this->cache->makeKey( 'translate', 'webimport', $this->getUser()->getId() );
+		$cache = $this->getCache();
+		$key = $cache->makeKey( 'translate', 'webimport', $this->getUser()->getId() );
 
-		return $this->cache->delete( $key );
+		return $cache->delete( $key );
 	}
 }

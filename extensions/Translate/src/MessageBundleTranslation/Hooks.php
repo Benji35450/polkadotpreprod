@@ -5,6 +5,7 @@ namespace MediaWiki\Extension\Translate\MessageBundleTranslation;
 
 use Content;
 use IContextSource;
+use JobQueueGroup;
 use MediaWiki\Hook\EditFilterMergedContentHook;
 use MediaWiki\Logger\LoggerFactory;
 use MediaWiki\MediaWikiServices;
@@ -13,6 +14,7 @@ use MediaWiki\Storage\Hook\PageSaveCompleteHook;
 use MessageGroupWANCache;
 use Psr\Log\LoggerInterface;
 use Status;
+use TranslateUtils;
 use User;
 use WANObjectCache;
 use Wikimedia\Rdbms\ILoadBalancer;
@@ -33,10 +35,10 @@ class Hooks implements EditFilterMergedContentHook, PageSaveCompleteHook {
 	private $logger;
 	/** @var ILoadBalancer */
 	private $loadBalancer;
-	/** @var MessageBundleStore */
-	private $messageBundleStore;
 	/** @var WANObjectCache */
 	private $WANObjectCache;
+	/** @var JobQueueGroup */
+	private $jobQueue;
 	/** @var bool */
 	private $enableIntegration;
 
@@ -44,13 +46,13 @@ class Hooks implements EditFilterMergedContentHook, PageSaveCompleteHook {
 		LoggerInterface $logger,
 		ILoadBalancer $loadBalancer,
 		WANObjectCache $WANObjectCache,
-		MessageBundleStore $messageBundleStore,
+		JobQueueGroup $jobQueue,
 		bool $enableIntegration
 	) {
 		$this->logger = $logger;
 		$this->loadBalancer = $loadBalancer;
 		$this->WANObjectCache = $WANObjectCache;
-		$this->messageBundleStore = $messageBundleStore;
+		$this->jobQueue = $jobQueue;
 		$this->enableIntegration = $enableIntegration;
 	}
 
@@ -61,7 +63,8 @@ class Hooks implements EditFilterMergedContentHook, PageSaveCompleteHook {
 				LoggerFactory::getInstance( 'Translate.MessageBundle' ),
 				$services->getDBLoadBalancer(),
 				$services->getMainWANObjectCache(),
-				$services->get( 'Translate:MessageBundleStore' ),
+				// BC <= MW 1.36 (use service when it exists)
+				TranslateUtils::getJobQueueGroup(),
 				$services->getMainConfig()->get( 'TranslateEnableMessageBundleIntegration' )
 			);
 		return self::$instance;
@@ -78,9 +81,7 @@ class Hooks implements EditFilterMergedContentHook, PageSaveCompleteHook {
 	): void {
 		if ( $content instanceof MessageBundleContent ) {
 			try {
-				// Validation is performed in the store because injecting services into the
-				// Content class is not straightforward
-				$this->messageBundleStore->validate( $context->getTitle(), $content );
+				$content->getMessages();
 			} catch ( MalformedBundle $e ) {
 				// MalformedBundle implements MessageSpecifier, but for unknown reason it gets
 				// cast to a string if we don't convert it to a proper message.
@@ -104,11 +105,10 @@ class Hooks implements EditFilterMergedContentHook, PageSaveCompleteHook {
 
 		$method = __METHOD__;
 		$content = $revisionRecord->getContent( SlotRecord::MAIN );
-		$pageTitle = $wikiPage->getTitle();
 
 		if ( $content === null ) {
 			$this->logger->debug( "Unable to access content of page {pageName} in $method", [
-				'pageName' => $pageTitle->getPrefixedText()
+				'pageName' => $wikiPage->getTitle()->getPrefixedText()
 			] );
 			return;
 		}
@@ -118,15 +118,55 @@ class Hooks implements EditFilterMergedContentHook, PageSaveCompleteHook {
 		}
 
 		try {
-			$this->messageBundleStore->save( $pageTitle, $revisionRecord, $content );
+			$messages = $content->getMessages();
 		} catch ( MalformedBundle $e ) {
 			// This should not happen, as it should not be possible to save a page with invalid content
 			$this->logger->warning( "Page {pageName} is not a valid message bundle in $method", [
-				'pageName' => $pageTitle->getPrefixedText(),
+				'pageName' => $wikiPage->getTitle()->getPrefixedText(),
 				'exception' => $e,
 			] );
 			return;
 		}
+
+		// Update mb:ready in revtag as appropriate (remove or change revision)
+		$dbw = $this->loadBalancer->getConnectionRef( DB_PRIMARY );
+
+		$previousRevisionId = $dbw->selectField(
+			'revtag',
+			'rt_revision',
+			[
+				'rt_page' => $wikiPage->getId(),
+				'rt_type' => 'mb:ready',
+			]
+		);
+		// Convert to correct type
+		$previousRevisionId = $previousRevisionId ? (int)$previousRevisionId : null;
+
+		$deleteConditions = [
+			'rt_page' => $wikiPage->getId(),
+			'rt_type' => 'mb:ready',
+		];
+		if ( $previousRevisionId !== null ) {
+			$dbw->delete( 'revtag', $deleteConditions, __METHOD__ );
+		}
+
+		if ( $messages ) {
+			// Bundle is valid and contains translatable messages
+			$insertConditions = $deleteConditions;
+			$insertConditions['rt_revision'] = $revisionRecord->getId();
+			$dbw->insert( 'revtag', $insertConditions, __METHOD__ );
+			// Defer most of the heavy work to the job queue
+			$job = UpdateMessageBundleJob::newJob(
+				$wikiPage->getTitle(),
+				$revisionRecord->getId(),
+				$previousRevisionId
+			);
+
+			$this->jobQueue->push( $job );
+		}
+
+		// What should we do if there are no messages? Use the previous version? Remove the group?
+		// Currently, the bundle is removed from translation.
 	}
 
 	/** Hook: TranslateInitGroupLoaders */

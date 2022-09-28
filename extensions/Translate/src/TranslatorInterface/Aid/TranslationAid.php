@@ -74,7 +74,6 @@ abstract class TranslationAid {
 			'support' => SupportAid::class,
 			'gettext' => GettextDocumentationAid::class,
 			'insertables' => InsertablesAid::class,
-			'editsummaries' => EditSummariesAid::class,
 		];
 	}
 }

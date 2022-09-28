@@ -415,11 +415,9 @@ HTML
 			$link = $this->getPageTitle()->getFullURL( $params );
 			$link = "<span class='plainlinks'>[$link $linkText]</span>";
 
-			$out = $this->getOutput();
-			$out->addHTML(
-				Html::successBox(
-					$out->msg( 'tux-sst-match-message', $link )->parse()
-				)
+			$this->getOutput()->wrapWikiMsg(
+				'<div class="successbox">$1</div>',
+				[ 'tux-sst-match-message', $link ]
 			);
 		}
 
@@ -447,11 +445,6 @@ HTML
 
 	private function showSearchError( string $search, Message $message ): void {
 		$messageSelector = $this->messageSelector();
-		$messageHTML = Html::errorBox(
-			$message->escaped(),
-			'',
-			'row'
-		);
 		$this->getOutput()->addHTML( <<<HTML
 <div class="grid tux-searchpage">
 	<div class="row tux-searchboxform">
@@ -459,7 +452,7 @@ HTML
 		<div class="row tux-search-options">
 			<div class="offset-by-three nine columns tux-search-inputs">
 				<div class="row searchinput">$search</div>
-				$messageHTML
+				<div class="row errorbox">{$message->escaped()}</div>
 			</div>
 		</div>
 	</div>

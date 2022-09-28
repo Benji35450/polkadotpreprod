@@ -9,6 +9,7 @@ use MediaWiki\Extension\Translate\Services;
 use MediaWiki\Logger\LoggerFactory;
 use MediaWiki\MediaWikiServices;
 use MessageIndexRebuildJob;
+use TranslateUtils;
 
 /**
  * @author Abijeet Patro
@@ -26,8 +27,7 @@ class CompleteExternalTranslationMaintenanceScript extends Maintenance {
 	}
 
 	public function execute() {
-		$mwServices = MediaWikiServices::getInstance();
-		$config = $mwServices->getMainConfig();
+		$config = MediaWikiServices::getInstance()->getMainConfig();
 
 		if ( !$config->get( 'TranslateGroupSynchronizationCache' ) ) {
 			$this->fatalError( 'GroupSynchronizationCache is not enabled' );
@@ -79,7 +79,7 @@ class CompleteExternalTranslationMaintenanceScript extends Maintenance {
 		if ( !$groupsInProgress ) {
 			// No groups in progress.
 			$logger->info( 'All message groups are now in sync.' );
-			$mwServices->getJobQueueGroup()->push( MessageIndexRebuildJob::newJob() );
+			TranslateUtils::getJobQueueGroup()->push( MessageIndexRebuildJob::newJob() );
 		}
 
 		$logger->info(

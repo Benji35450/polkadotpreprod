@@ -30,7 +30,6 @@
 	"translate-desc": "[[Special:Translate|Pagina speciale]] per tradurre MediaWiki e non solo",
 	"translate-taskui-export-to-file": "Esporta nel formato nativo",
 	"translate-taskui-export-as-po": "Esporta per la traduzione off-line",
-	"translate-taskui-export-as-csv": "Esporta in formato CSV",
 	"translate-taction-translate": "Traduci",
 	"translate-taction-proofread": "Revisiona",
 	"translate-taction-lstats": "Statistiche della lingua",
@@ -202,7 +201,6 @@
 	"supportedlanguages-portallink": "[$1] $2 - $3",
 	"supportedlanguages-portallink-nocldr": "[$1] $2",
 	"supportedlanguages-sqlite-error": "SQLite non è supportato",
-	"supportedlanguages-postgres-error": "PostgreSQL non è supportato",
 	"supportedlanguages-translators": "{{PLURAL:$2|{{GENDER:$3|Traduttore|Traduttrice}}|Traduttori}}: $1",
 	"supportedlanguages-recenttranslations": "traduzioni recenti",
 	"supportedlanguages-count": "$1 {{PLURAL:$1|lingua|lingue}} in totale.",
@@ -317,7 +315,7 @@
 	"tux-save-unknown-error": "Si è verificato un errore sconosciuto.",
 	"tux-editor-placeholder-documentation": "Aggiungi documentazione del messaggio",
 	"tux-editor-placeholder-language": "La tua traduzione in $1",
-	"tux-editor-editsummary-placeholder": "Spiega le tue modifiche (facoltativo)",
+	"tux-editor-editsummary-placeholder": "Oggetto facoltativo",
 	"tux-editor-paste-original-button-label": "Incolla il testo sorgente",
 	"tux-editor-discard-changes-button-label": "Ignora modifiche",
 	"tux-editor-save-button-label": "Pubblica traduzione",
@@ -329,8 +327,6 @@
 	"tux-editor-edit-desc": "Modifica documentazione",
 	"tux-editor-add-desc": "Aggiungi documentazione",
 	"tux-editor-suggestions-title": "Suggerimenti",
-	"tux-editor-latest-updates-title": "Ultimi aggiornamenti",
-	"tux-editor-all-changes": "Tutte le modifiche",
 	"tux-editor-in-other-languages": "In altre lingue",
 	"tux-editor-need-more-help": "Hai bisogno di aiuto?",
 	"tux-editor-ask-help": "Chiedi per maggiori informazioni",
@@ -397,6 +393,5 @@
 	"tux-nojs": "Questo strumento non funziona senza JavaScript. JavaScript potrebbe essere disattivato, non ha funzionato o questo browser non è supportato.",
 	"specialpages-group-translation": "Traduzione",
 	"translate-messagebundle-error-key-too-long": "La chiave \"$1\" è troppo lunga",
-	"translate-messagebundle-error-empty-value": "La chiave \"$1\" non ha un valore",
-	"log-action-filter-translationreview": "Tipo di azione:"
+	"translate-messagebundle-error-empty-value": "La chiave \"$1\" non ha un valore"
 }

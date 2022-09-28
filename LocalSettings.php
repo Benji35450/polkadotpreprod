@@ -2,7 +2,6 @@
 #error_reporting( -1 );
 #ini_set( 'display_errors', 1 );
 #$wgDebugDumpSql = true;
-#$wgShowExceptionDetails = true;
 #$wgDebugToolbar = true;
 #$wgShowDebug = true;
 #$wgDevelopmentWarnings = true;
@@ -177,6 +176,7 @@ wfLoadExtension( 'WikiEditor' );
 wfLoadExtension( 'Babel' );
 wfLoadExtension( 'cldr' );
 wfLoadExtension( 'UniversalLanguageSelector' );
+
 # End of automatically generated settings.
 # Add more configuration options below.
 

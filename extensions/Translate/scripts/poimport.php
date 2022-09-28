@@ -9,8 +9,6 @@
  * @file
  */
 
-use MediaWiki\MediaWikiServices;
-
 // Standard boilerplate to define $IP
 if ( getenv( 'MW_INSTALL_PATH' ) !== false ) {
 	$IP = getenv( 'MW_INSTALL_PATH' );
@@ -302,7 +300,7 @@ class WikiWriter {
 			return;
 		}
 
-		$page = MediaWikiServices::getInstance()->getWikiPageFactory()->newFromTitle( $title );
+		$page = WikiPage::factory( $title );
 		$content = ContentHandler::makeContent( $text, $title );
 		$status = $page->doUserEditContent(
 			$content,

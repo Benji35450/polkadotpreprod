@@ -137,7 +137,7 @@ class MessageHandle {
 	 * Get the primary MessageGroup this message belongs to.
 	 * You should check first that the handle is valid.
 	 * @throws MWException
-	 * @return MessageGroup|null
+	 * @return MessageGroup
 	 */
 	public function getGroup() {
 		$ids = $this->getGroupIds();
@@ -178,7 +178,7 @@ class MessageHandle {
 
 			// Schedule a job in the job queue (with deduplication)
 			$job = MessageIndexRebuildJob::newJob();
-			MediaWikiServices::getInstance()->getJobQueueGroup()->push( $job );
+			TranslateUtils::getJobQueueGroup()->push( $job );
 
 			return false;
 		}

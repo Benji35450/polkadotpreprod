@@ -180,6 +180,7 @@
 	"translate-smg-more": "Po potrditvi teh sprememb bo treba obdelati več sprememb.",
 	"translate-smg-left": "Vsebina sporočila v wikiju",
 	"translate-smg-right": "Prihajajoče spremembe",
+	"translate-smg-rename-select-err": "Prosimo, izberite sporočilo, ki ga želite preimenovati",
 	"translate-manage-import-diff": "Sporočilo $1 | Dejanja: $2",
 	"translate-manage-import-new": "Novo sporočilo $1",
 	"translate-manage-import-deleted": "Izbriši sporočilo $1",
@@ -263,7 +264,7 @@
 	"tux-status-saving": "Objavljanje ...",
 	"tux-status-unsaved": "Neobjavljeno",
 	"tux-save-unknown-error": "Prišlo je do neznane napake.",
-	"tux-editor-editsummary-placeholder": "Pojasnite svoje spremembe (neobvezno)",
+	"tux-editor-editsummary-placeholder": "Neobvezni povzetek",
 	"tux-editor-paste-original-button-label": "Prilepi izvorno besedilo",
 	"tux-editor-discard-changes-button-label": "Zavrzi spremembe",
 	"tux-editor-save-button-label": "Objavi prevod",
@@ -319,7 +320,7 @@
 	"tux-empty-you-can-help-providing": "Pomagate lahko z novimi prevodi",
 	"tux-empty-nothing-new-to-proofread": "Za pregled ni ničesar novega",
 	"tux-empty-you-can-review-already-proofread": "Pregledujete lahko prevode, ki so jih pregledali že drugi",
-	"tux-empty-list-other": "Ničesar ni treba prevesti.",
+	"tux-empty-list-other": "Ničesar več ni treba prevesti.",
 	"tux-empty-list-other-guide": "Pomagate lahko s pregledom obstoječih prevodov.",
 	"tux-empty-list-other-action": "Pregled prevodov",
 	"tux-empty-list-other-link": "Prikaz vseh sporočil",
@@ -336,6 +337,7 @@
 	"translate-statsbar-tooltip": "$1% prevedenih, $2% pregledanih",
 	"translate-statsbar-tooltip-with-fuzzy": "$1% prevedenih, $2% pregledanih, $3% zastarelih",
 	"translate-search-more-groups-info": "Še $1 {{PLURAL:$1|skupina|skupini|skupine|skupin}}",
+	"translate-syntax-error": "Prevod vsebuje skladenjske napake",
 	"tux-session-expired": "Niste več prijavljeni. Prosimo, prijavite se na ločenem zavihku. Druga možnost je, da ustvarite kopijo neshranjenega prevoda, se prijavite, se vrnete na to stran in znova vnesete svoj prevod.",
 	"tux-nojs": "Orodje ne deluje brez JavaScripta. JavaScript je onemogočen, ne deluje ali pa brskalnik ni podprt."
 }

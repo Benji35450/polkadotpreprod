@@ -4,7 +4,7 @@ use MediaWiki\Extension\Translate\PageTranslation\MoveTranslatableBundleMaintena
 
 trigger_error(
 	'The script moveTranslatablePage.php has been deprecated. '
-	. 'Use moveTranslatableBundle.php instead.',
+	. 'Use moveTranslatableBunde.php instead.',
 	E_USER_DEPRECATED
  );
 

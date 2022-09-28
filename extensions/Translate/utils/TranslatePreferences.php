@@ -9,8 +9,6 @@
  * @license GPL-2.0-or-later
  */
 
-use MediaWiki\Extension\Translate\Utilities\HTMLJsSelectToInputField;
-use MediaWiki\Extension\Translate\Utilities\JsSelectToInput;
 use MediaWiki\MediaWikiServices;
 
 /**
@@ -52,8 +50,15 @@ class TranslatePreferences {
 	 * @return JsSelectToInput
 	 */
 	protected static function languageSelector() {
-		$lang = RequestContext::getMain()->getLanguage();
-		$languages = MediaWikiServices::getInstance()->getLanguageNameUtils()->getLanguageNames( $lang->getCode() );
+		if ( is_callable( [ LanguageNames::class, 'getNames' ] ) ) {
+			$lang = RequestContext::getMain()->getLanguage();
+			$languages = LanguageNames::getNames( $lang->getCode(),
+				LanguageNames::FALLBACK_NORMAL
+			);
+		} else {
+			$languages = MediaWikiServices::getInstance()->getLanguageNameUtils()->getLanguageNames();
+		}
+
 		ksort( $languages );
 
 		$selector = new XmlSelect( false, 'mw-language-selector' );

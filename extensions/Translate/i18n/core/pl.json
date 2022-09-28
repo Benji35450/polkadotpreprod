@@ -40,7 +40,6 @@
 	"translate-fuzzybot-desc": "To jest specjalne konto systemowe używane przez rozszerzenie MediaWiki [https://www.mediawiki.org/wiki/Special:MyLanguage/Extension:Translate Translate] służące do utrzymywania tłumaczeń.\nTo konto jest częścią oprogramowania MediaWiki - nie jest prowadzone przez żadnego użytkownika.",
 	"translate-taskui-export-to-file": "Eksportuj w formacie macierzystym",
 	"translate-taskui-export-as-po": "Eksportuj do tłumaczenia off-line",
-	"translate-taskui-export-as-csv": "Eksportuj w formacie CSV",
 	"translate-taction-translate": "Przetłumacz",
 	"translate-taction-proofread": "Przejrzano",
 	"translate-taction-lstats": "Statystyka języka",
@@ -173,7 +172,6 @@
 	"translate-statsf-alt-text": "Oto alternatywa tekstowa dla statystyk tłumaczeń.",
 	"translate-statsf-embed": "Kod do osadzenia grafu statystyk tłumaczeń na innych stronach.",
 	"translate-tag-page-desc": "Tłumaczenie wiki strony [[$2|$1]] z $3 ($4).",
-	"translate-tag-page-wikipage-desc": "[[$1|Tłumaczenie]] strony wiki [[$2]] z języka <bdi>$3</bdi> ($4) na <bdi>$5</bdi> ($6)",
 	"translate-sidebar-alltrans": "W innych językach",
 	"translations": "Wszystkie tłumaczenia",
 	"translations-summary": "Wprowadź poniżej nazwę komunikatu, aby zobaczyć wszystkie dostępne tłumaczenia.",
@@ -348,7 +346,7 @@
 	"tux-status-unsaved": "Nieopublikowane",
 	"tux-save-unknown-error": "Wystąpił nieznany błąd.",
 	"tux-editor-placeholder-language": "Twoje tłumaczenie na język $1",
-	"tux-editor-editsummary-placeholder": "Opis zmian (opcjonalne)",
+	"tux-editor-editsummary-placeholder": "Opcjonalne podsumowanie",
 	"tux-editor-paste-original-button-label": "Wklej tekst źródłowy",
 	"tux-editor-discard-changes-button-label": "Porzuć zmiany",
 	"tux-editor-save-button-label": "Opublikuj tłumaczenie",
@@ -425,6 +423,5 @@
 	"translate-syntax-error": "Tłumaczenie zawiera błąd składni",
 	"tux-session-expired": "Nie jesteś już zalogowany. Zaloguj się w osobnej karcie. Alternatywnie, możesz wykonać kopię niezapisanych tłumaczeń, zalogować się i powrócić do tej strony, a następnie ponownie wprowadzić tłumaczenia.",
 	"tux-nojs": "To narzędzie nie działa, jeżeli nie działa obsługa JavaScript. Jest u ciebie wyłączona, nie działa lub ta przeglądarka nie jest wspierana.",
-	"specialpages-group-translation": "Tłumaczenie",
-	"log-action-filter-translationreview": "Rodzaj działania:"
+	"specialpages-group-translation": "Tłumaczenie"
 }

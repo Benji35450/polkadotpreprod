@@ -1,7 +1,5 @@
 <?php
 
-use MediaWiki\Extension\Translate\MessageGroupProcessing\RevTagStore;
-use MediaWiki\Extension\Translate\MessageGroupProcessing\TranslatableBundle;
 use MediaWiki\Extension\Translate\PageTranslation\TranslationPage;
 use MediaWiki\Extension\Translate\Services;
 use MediaWiki\Linker\LinkTarget;
@@ -18,7 +16,7 @@ use Wikimedia\Rdbms\Database;
  * @license GPL-2.0-or-later
  * @ingroup PageTranslation
  */
-class TranslatablePage extends TranslatableBundle {
+class TranslatablePage {
 	/**
 	 * List of keys in the metadata table that need to be handled for moves and deletions
 	 * @phpcs-require-sorted-array
@@ -36,8 +34,6 @@ class TranslatablePage extends TranslatableBundle {
 
 	/** @var Title */
 	protected $title;
-	/** @var RevTagStore */
-	protected $revTagStore;
 	/** @var ?string Text contents of the page. */
 	protected $text;
 	/** @var ?int Revision of the page, if applicable. */
@@ -52,7 +48,6 @@ class TranslatablePage extends TranslatableBundle {
 	/** @param Title $title Title object for the page */
 	protected function __construct( Title $title ) {
 		$this->title = $title;
-		$this->revTagStore = new RevTagStore();
 	}
 
 	/**
@@ -112,8 +107,11 @@ class TranslatablePage extends TranslatableBundle {
 		return $obj;
 	}
 
-	/** @inheritDoc */
-	public function getTitle(): Title {
+	/**
+	 * Returns the title for this translatable page.
+	 * @return Title
+	 */
+	public function getTitle() {
 		return $this->title;
 	}
 
@@ -174,8 +172,11 @@ class TranslatablePage extends TranslatableBundle {
 		return $this->getTitle()->getPageLanguage()->getCode();
 	}
 
-	/** @inheritDoc */
-	public function getMessageGroupId(): string {
+	/**
+	 * Returns MessageGroup id (to be) used for translating this page.
+	 * @return string
+	 */
+	public function getMessageGroupId() {
 		return self::getMessageGroupIdFromTitle( $this->getTitle() );
 	}
 
@@ -297,8 +298,8 @@ class TranslatablePage extends TranslatableBundle {
 	 * @param int $revision
 	 * @param null|string $value
 	 */
-	public function addMarkedTag( int $revision, $value = null ) {
-		$this->revTagStore->replaceTag( $this->getTitle(), 'tp:mark', $revision, $value );
+	public function addMarkedTag( $revision, $value = null ) {
+		$this->addTag( 'tp:mark', $revision, $value );
 		self::clearSourcePageCache();
 	}
 
@@ -307,27 +308,55 @@ class TranslatablePage extends TranslatableBundle {
 	 * ready for marking for translation.
 	 * @param int $revision
 	 */
-	public function addReadyTag( int $revision ): void {
-		$this->revTagStore->replaceTag( $this->getTitle(), 'tp:tag', $revision );
-		if ( !self::isSourcePage( $this->getTitle() ) ) {
-			self::clearSourcePageCache();
+	public function addReadyTag( $revision ) {
+		$this->addTag( 'tp:tag', $revision );
+	}
+
+	/**
+	 * @param string $tag Tag name
+	 * @param int $revision Revision ID to add tag for
+	 * @param mixed|null $value Optional. Value to be stored as serialized with | as separator
+	 * @throws MWException
+	 */
+	protected function addTag( $tag, $revision, $value = null ) {
+		$dbw = wfGetDB( DB_PRIMARY );
+
+		$aid = $this->getTitle()->getArticleID();
+
+		if ( is_object( $revision ) ) {
+			throw new MWException( 'Got object, expected id' );
 		}
+
+		$conds = [
+			'rt_page' => $aid,
+			'rt_type' => RevTag::getType( $tag ),
+			'rt_revision' => $revision
+		];
+		$dbw->delete( 'revtag', $conds, __METHOD__ );
+
+		if ( $value !== null ) {
+			$conds['rt_value'] = serialize( implode( '|', $value ) );
+		}
+
+		$dbw->insert( 'revtag', $conds, __METHOD__ );
+
+		self::$tagCache[$aid][$tag] = $revision;
 	}
 
 	/**
 	 * Returns the latest revision which has marked tag, if any.
-	 * @return ?int
+	 * @return int|bool false
 	 */
 	public function getMarkedTag() {
-		return $this->revTagStore->getLatestRevisionWithTag( $this->getTitle(), 'tp:mark' );
+		return $this->getTag( 'tp:mark' );
 	}
 
 	/**
 	 * Returns the latest revision which has ready tag, if any.
-	 * @return ?int
+	 * @return int|bool false
 	 */
-	public function getReadyTag(): ?int {
-		return $this->revTagStore->getLatestRevisionWithTag( $this->getTitle(), 'tp:tag' );
+	public function getReadyTag() {
+		return $this->getTag( 'tp:tag' );
 	}
 
 	/**
@@ -336,12 +365,50 @@ class TranslatablePage extends TranslatableBundle {
 	 */
 	public function unmarkTranslatablePage() {
 		$aid = $this->getTitle()->getArticleID();
+
 		$dbw = wfGetDB( DB_PRIMARY );
+		$conds = [
+			'rt_page' => $aid,
+			'rt_type' => [
+				RevTag::getType( 'tp:mark' ),
+				RevTag::getType( 'tp:tag' ),
+			],
+		];
 
-		$this->revTagStore->removeTags( $this->getTitle(), 'tp:mark', 'tp:tag' );
+		$dbw->delete( 'revtag', $conds, __METHOD__ );
 		$dbw->delete( 'translate_sections', [ 'trs_page' => $aid ], __METHOD__ );
-
+		unset( self::$tagCache[$aid] );
 		self::clearSourcePageCache();
+	}
+
+	/**
+	 * @param string $tag
+	 * @param int $dbt
+	 * @return int|bool False if tag is not found, else revision id
+	 */
+	protected function getTag( $tag, $dbt = DB_REPLICA ) {
+		if ( !$this->getTitle()->exists() ) {
+			return false;
+		}
+
+		$aid = $this->getTitle()->getArticleID();
+
+		// ATTENTION: Cache should only be updated on POST requests.
+		if ( isset( self::$tagCache[$aid][$tag] ) ) {
+			return self::$tagCache[$aid][$tag];
+		}
+
+		$db = wfGetDB( $dbt );
+
+		$conds = [
+			'rt_page' => $aid,
+			'rt_type' => RevTag::getType( $tag ),
+		];
+
+		$options = [ 'ORDER BY' => 'rt_revision DESC' ];
+
+		$value = $db->selectField( 'revtag', 'rt_revision', $conds, __METHOD__, $options );
+		return $value === false ? $value : (int)$value;
 	}
 
 	/**
@@ -375,34 +442,104 @@ class TranslatablePage extends TranslatableBundle {
 		return $db->select( 'revtag', $fields, $conds, __METHOD__, $options );
 	}
 
-	/** @inheritDoc */
-	public function getTranslationPages(): array {
-		$mwServices = MediaWikiServices::getInstance();
-		$knownLanguageCodes = $this->getMessageGroup()->getTranslatableLanguages()
-			?? TranslateUtils::getLanguageNames( null );
+	/**
+	 * Fetch the available translation pages from database
+	 * @return Title[]
+	 */
+	public function getTranslationPages() {
+		$dbr = TranslateUtils::getSafeReadDB();
 
-		$prefixedDbTitleKey = $this->getTitle()->getDBkey() . '/';
-		$baseNamespace = $this->getTitle()->getNamespace();
+		$prefix = $this->getTitle()->getDBkey() . '/';
+		$likePattern = $dbr->buildLike( $prefix, $dbr->anyString() );
+		$res = $dbr->select(
+			'page',
+			[ 'page_namespace', 'page_title' ],
+			[
+				'page_namespace' => $this->getTitle()->getNamespace(),
+				"page_title $likePattern"
+			],
+			__METHOD__
+		);
 
-		// Build a link batch query for all translation pages
-		$linkBatch = $mwServices->getLinkBatchFactory()->newLinkBatch();
-		foreach ( array_keys( $knownLanguageCodes ) as $code ) {
-			$linkBatch->add( $baseNamespace, $prefixedDbTitleKey . $code );
-		}
+		$titles = TitleArray::newFromResult( $res );
+		$filtered = [];
 
-		$translationPages = [];
-		foreach ( $linkBatch->getPageIdentities() as $pageIdentity ) {
-			if ( $pageIdentity->exists() ) {
-				$translationPages[] = Title::castFromPageIdentity( $pageIdentity );
+		// Make sure we only get translation subpages while ignoring others
+		$codes = MediaWikiServices::getInstance()->getLanguageNameUtils()->getLanguageNames();
+		$prefix = $this->getTitle()->getText();
+		/** @var Title $title */
+		foreach ( $titles as $title ) {
+			[ $name, $code ] = TranslateUtils::figureMessage( $title->getText() );
+			if ( !isset( $codes[$code] ) || $name !== $prefix ) {
+				continue;
 			}
+			$filtered[] = $title;
 		}
 
-		return $translationPages;
+		return $filtered;
 	}
 
-	/** @inheritDoc */
-	public function getTranslationUnitPages( ?string $code = null ): array {
-		return $this->getTranslationUnitPagesByTitle( $this->title, $code );
+	/**
+	 * Returns a list of translation unit pages.
+	 * @param string $set Can be either 'all', or 'active'
+	 * @param ?string $code Only list unit pages in given language.
+	 * @return Title[]
+	 * @since 2012-08-06
+	 */
+	public function getTranslationUnitPages( string $set = 'active', ?string $code = null ): array {
+		$dbw = wfGetDB( DB_PRIMARY );
+
+		$base = $this->getTitle()->getPrefixedDBkey();
+		// Including the / used as separator
+		$baseLength = strlen( $base ) + 1;
+
+		if ( $code === null ) {
+			$like = $dbw->buildLike( "$base/", $dbw->anyString() );
+		} else {
+			$like = $dbw->buildLike( "$base/", $dbw->anyString(), "/$code" );
+		}
+
+		$fields = [ 'page_namespace', 'page_title' ];
+		$conds = [
+			'page_namespace' => NS_TRANSLATIONS,
+			'page_title ' . $like
+		];
+		$res = $dbw->select( 'page', $fields, $conds, __METHOD__ );
+
+		// Only include pages which belong to this translatable page.
+		// Problematic cases are when pages Foo and Foo/bar are both
+		// translatable. Then when querying for Foo, we also get units
+		// belonging to Foo/bar.
+		$factory = Services::getInstance()->getTranslationUnitStoreFactory();
+		// This method (getTranslationUnitPages) is only called when deleting or moving a
+		// translatable page. This should be low traffic, and since this method is already using
+		// the primary database for the other query, it seems safer to use the write here until
+		// this is refactored.
+		$store = $factory->getWriter( $this->getTitle() );
+		$sections = array_flip( $store->getNames() );
+		$units = [];
+		foreach ( $res as $row ) {
+			$title = Title::newFromRow( $row );
+
+			// Strip the language code and the name of the
+			// translatable to get plain section key
+			$handle = new MessageHandle( $title );
+			$key = substr( $handle->getKey(), $baseLength );
+			if ( strpos( $key, '/' ) !== false ) {
+				// Probably belongs to translatable subpage
+				continue;
+			}
+
+			// Check against list of sections if requested
+			if ( $set === 'active' && !isset( $sections[$key] ) ) {
+				continue;
+			}
+
+			// We have a match :)
+			$units[] = $title;
+		}
+
+		return $units;
 	}
 
 	/** @return array */
@@ -482,16 +619,6 @@ class TranslatablePage extends TranslatableBundle {
 		return $store->getRevisionByTitle( $title->getSubpage( $sourceLanguage ) );
 	}
 
-	/** @inheritDoc */
-	public function isMoveable(): bool {
-		return $this->getMarkedTag() !== null;
-	}
-
-	/** @inheritDoc */
-	public function isDeletable(): bool {
-		return $this->getMarkedTag() !== null;
-	}
-
 	/**
 	 * @param Title $title
 	 * @return bool|self
@@ -521,7 +648,7 @@ class TranslatablePage extends TranslatableBundle {
 
 		$page = self::newFromTitle( $newtitle );
 
-		if ( $page->getMarkedTag() === null ) {
+		if ( $page->getMarkedTag() === false ) {
 			return false;
 		}
 
@@ -569,13 +696,11 @@ class TranslatablePage extends TranslatableBundle {
 		$translatablePageIds = $cache->getWithSetCallback(
 			$cacheKey,
 			$cache::TTL_HOUR * 2,
-			static function ( $oldValue, &$ttl, array &$setOpts ) {
+			function ( $oldValue, &$ttl, array &$setOpts ) {
 				$dbr = wfGetDB( DB_REPLICA );
 				$setOpts += Database::getCacheSetOptions( $dbr );
 
-				return RevTagStore::getTranslatableBundleIds(
-					RevTag::getType( 'tp:mark' ), RevTag::getType( 'tp:tag' )
-				);
+				return self::getTranslatablePages();
 			},
 			[
 				'checkKeys' => [ $cacheKey ],
@@ -593,5 +718,30 @@ class TranslatablePage extends TranslatableBundle {
 	public static function clearSourcePageCache(): void {
 		$cache = MediaWikiServices::getInstance()->getMainWANObjectCache();
 		$cache->touchCheckKey( $cache->makeKey( 'pagetranslation', 'sourcepages' ) );
+	}
+
+	/**
+	 * Get a list of page ids where the latest revision is either tagged or marked
+	 * @return array
+	 */
+	public static function getTranslatablePages() {
+		$dbr = TranslateUtils::getSafeReadDB();
+
+		$tables = [ 'revtag', 'page' ];
+		$fields = 'rt_page';
+		$conds = [
+			'rt_page = page_id',
+			'rt_revision = page_latest',
+			'rt_type' => [ RevTag::getType( 'tp:mark' ), RevTag::getType( 'tp:tag' ) ],
+		];
+		$options = [ 'GROUP BY' => 'rt_page' ];
+
+		$res = $dbr->select( $tables, $fields, $conds, __METHOD__, $options );
+		$results = [];
+		foreach ( $res as $row ) {
+			$results[] = $row->rt_page;
+		}
+
+		return $results;
 	}
 }

@@ -13,10 +13,10 @@ use MediaWiki\Revision\RevisionStore;
 use MediaWiki\Revision\SlotRecord;
 use MediaWiki\User\UserFactory;
 use Title;
-use TranslateUtils;
 use User;
 use Wikimedia\Rdbms\ILoadBalancer;
 use Wikimedia\Rdbms\IResultWrapper;
+use WikiPage;
 
 /**
  * @since 2022.01
@@ -118,10 +118,9 @@ class FuzzyTranslationsMaintenanceScript extends BaseMaintenanceScript {
 			if ( isset( $slots[$row->rev_id] ) ) {
 				$text = $slots[$row->rev_id][SlotRecord::MAIN]->blob_data;
 			} else {
-				$content = $this->revisionStore
-					->newRevisionFromRow( $row, IDBAccessObject::READ_NORMAL, $title )
-					->getContent( SlotRecord::MAIN );
-				$text = TranslateUtils::getTextFromTextContent( $content );
+				$text = $this->revisionStore->newRevisionFromRow( $row, IDBAccessObject::READ_NORMAL, $title )
+					->getContent( SlotRecord::MAIN )
+					->getNativeData();
 			}
 			$messagesContents[] = [ $title, $text ];
 		}
@@ -230,7 +229,7 @@ class FuzzyTranslationsMaintenanceScript extends BaseMaintenanceScript {
 			return;
 		}
 
-		$wikipage = MediaWikiServices::getInstance()->getWikiPageFactory()->newFromTitle( $title );
+		$wikipage = new WikiPage( $title );
 		$content = ContentHandler::makeContent( $text, $title );
 		$status = $wikipage->doUserEditContent(
 			$content,

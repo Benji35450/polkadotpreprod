@@ -10,7 +10,6 @@ use FormatJson;
 use MediaWiki\Logger\LoggerFactory;
 use MessageGroups;
 use Psr\Log\LoggerInterface;
-use Wikimedia\ParamValidator\ParamValidator;
 
 /**
  * Api module for managing group synchronization cache
@@ -109,17 +108,17 @@ class ManageGroupSynchronizationCacheActionApi extends ApiBase {
 	protected function getAllowedParams() {
 		return [
 			'operation' => [
-				ParamValidator::PARAM_TYPE => self::VALID_OPS,
-				ParamValidator::PARAM_ISMULTI => false,
-				ParamValidator::PARAM_REQUIRED => true,
+				ApiBase::PARAM_TYPE => self::VALID_OPS,
+				ApiBase::PARAM_ISMULTI => false,
+				ApiBase::PARAM_REQUIRED => true,
 			],
 			'title' => [
-				ParamValidator::PARAM_TYPE => 'string',
-				ParamValidator::PARAM_REQUIRED => false
+				ApiBase::PARAM_TYPE => 'string',
+				ApiBase::PARAM_REQUIRED => false
 			],
 			'group' => [
-				ParamValidator::PARAM_TYPE => 'string',
-				ParamValidator::PARAM_REQUIRED => true
+				ApiBase::PARAM_TYPE => 'string',
+				ApiBase::PARAM_REQUIRED => true
 			]
 		];
 	}

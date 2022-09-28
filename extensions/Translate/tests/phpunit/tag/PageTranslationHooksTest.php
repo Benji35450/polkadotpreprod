@@ -62,7 +62,7 @@ class PageTranslationHooksTest extends MediaWikiIntegrationTestCase {
 		// Setup objects
 		$superUser = $this->getTestSysop()->getUser();
 		$translatablePageTitle = Title::newFromText( 'Vuosaari' );
-		$page = $this->getServiceContainer()->getWikiPageFactory()->newFromTitle( $translatablePageTitle );
+		$page = WikiPage::factory( $translatablePageTitle );
 		$text = '<translate>pupu</translate>';
 		$content = ContentHandler::makeContent( $text, $translatablePageTitle );
 		$translatablePage = TranslatablePage::newFromTitle( $translatablePageTitle );
@@ -163,7 +163,7 @@ class PageTranslationHooksTest extends MediaWikiIntegrationTestCase {
 			'Sanity: must tag revision 1 ready for translate'
 		);
 
-		$wikiPage = MediaWikiServices::getInstance()->getWikiPageFactory()->newFromID( $title->getArticleID() );
+		$wikiPage = WikiPage::newFromID( $title->getArticleID() );
 
 		if ( method_exists( MediaWikiServices::class, 'getProtectPageFactory' ) ) {
 			// MW 1.38+

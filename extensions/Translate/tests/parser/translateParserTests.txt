@@ -1,18 +1,8 @@
-!! options
-version=2
-parsoid-compatible
-!! end
-
+!! Version 2
 # Force the test runner to ensure the extension is loaded
 !! functionhooks
 translation
 !! endfunctionhooks
-
-!! article
-Template:1x
-!! text
-{{{1}}}
-!! endarticle
 
 !! test
 #translation as magic word for valid language code
@@ -20,11 +10,9 @@ Template:1x
 title=[[Test/mr]]
 !! wikitext
 {{#translation:}}
-!! html/php
+!! html
 <p>/mr
 </p>
-!! html/parsoid
-<p><span about="#mwt1" typeof="mw:Transclusion" data-parsoid='{"pi":[[]]}' data-mw='{"parts":[{"template":{"target":{"wt":"#translation:","function":"translation"},"params":{},"i":0}}]}'>/mr</span></p>
 !! end
 
 !! test
@@ -33,10 +21,8 @@ title=[[Test/mr]]
 title=[[Test]]
 !! wikitext
 {{#translation:}}
-!! html/php
+!! html
 
-!! html/parsoid
-<span about="#mwt1" typeof="mw:Transclusion" data-parsoid='{"pi":[[]]}' data-mw='{"parts":[{"template":{"target":{"wt":"#translation:","function":"translation"},"params":{},"i":0}}]}'></span>
 !! end
 
 !! test
@@ -47,8 +33,6 @@ title=[[Test/ugaaa]]
 {{#translation:}}
 !! html
 
-!! html/parsoid
-<span about="#mwt1" typeof="mw:Transclusion" data-parsoid='{"pi":[[]]}' data-mw='{"parts":[{"template":{"target":{"wt":"#translation:","function":"translation"},"params":{},"i":0}}]}'></span>
 !! end
 
 !! test
@@ -91,16 +75,4 @@ Annotation markers starting lines should neither insert pre nor merge ranges
 !! html/parsoid
 <p data-parsoid='{"dsr":[0,91,0,0]}'><meta typeof="mw:Annotation/translate" data-parsoid='{"dsr":[0,11,null,null]}' data-mw='{"rangeId":"mwa0","extendedRange":false,"wtOffsets":[0,11]}'/><!--T:1--> translate 1<meta typeof="mw:Annotation/translate/End" data-parsoid='{"dsr":[33,45,null,null]}' data-mw='{"wtOffsets":[33,45]}'/>
 <meta typeof="mw:Annotation/translate" data-parsoid='{"dsr":[46,57,null,null]}' data-mw='{"rangeId":"mwa1","extendedRange":false,"wtOffsets":[46,57]}'/><!--T:2--> translate 2<meta typeof="mw:Annotation/translate/End" data-parsoid='{"dsr":[79,91,null,null]}' data-mw='{"wtOffsets":[79,91]}'/></p>
-!! end
-
-!! test
-tvar in a template should get stripped
-!! options
-parsoid={
-        "modes": ["wt2html"]
-}
-!! wikitext
-<translate>{{1x|<tvar|var>hello</>}}</translate>
-!! html/parsoid
-<p><meta typeof="mw:Annotation/translate" data-mw='{"rangeId":"mwa0","extendedRange":false,"wtOffsets":[0,11]}'/><span about="#mwt1" typeof="mw:Transclusion" data-parsoid='{"pi":[[{"k":"1"}]]}' data-mw='{"parts":[{"template":{"target":{"wt":"1x","href":"./Template:1x"},"params":{"1":{"wt":"&lt;tvar|var>hello&lt;/>"}},"i":0}}]}'>hello</span><meta typeof="mw:Annotation/translate/End" data-mw='{"wtOffsets":[36,48]}'/></p>
 !! end

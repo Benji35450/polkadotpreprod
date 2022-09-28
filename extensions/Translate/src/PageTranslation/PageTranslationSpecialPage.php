@@ -6,21 +6,17 @@ namespace MediaWiki\Extension\Translate\PageTranslation;
 use ContentHandler;
 use DifferenceEngine;
 use Html;
-use JobQueueGroup;
 use ManualLogEntry;
 use MediaWiki\Cache\LinkBatchFactory;
-use MediaWiki\Extension\Translate\Synchronization\MessageWebImporter;
 use MediaWiki\Extension\Translate\Utilities\LanguagesMultiselectWidget;
-use MediaWiki\Extension\TranslationNotifications\SpecialNotifyTranslators;
 use MediaWiki\Languages\LanguageFactory;
 use MediaWiki\Languages\LanguageNameUtils;
-use MediaWiki\MediaWikiServices;
 use MediaWiki\Revision\RevisionRecord;
 use MediaWiki\User\UserIdentity;
-use Message;
 use MessageGroups;
 use MessageGroupStatsRebuildJob;
 use MessageIndex;
+use MessageWebImporter;
 use MWException;
 use OOUI\ButtonInputWidget;
 use OOUI\CheckboxInputWidget;
@@ -29,8 +25,8 @@ use OOUI\FieldsetLayout;
 use OOUI\TextInputWidget;
 use PermissionsError;
 use RevTag;
+use SpecialNotifyTranslators;
 use SpecialPage;
-use Status;
 use Title;
 use TranslatablePage;
 use TranslateMetadata;
@@ -38,6 +34,7 @@ use TranslateUtils;
 use TranslationsUpdateJob;
 use WebRequest;
 use Wikimedia\Rdbms\IResultWrapper;
+use WikiPage;
 use Xml;
 use function count;
 use function wfEscapeWikiText;
@@ -69,16 +66,13 @@ class PageTranslationSpecialPage extends SpecialPage {
 	private $translatablePageParser;
 	/** @var LinkBatchFactory */
 	private $linkBatchFactory;
-	/** @var JobQueueGroup */
-	private $jobQueueGroup;
 
 	public function __construct(
 		LanguageNameUtils $languageNameUtils,
 		LanguageFactory $languageFactory,
 		TranslationUnitStoreFactory $translationUnitStoreFactory,
 		TranslatablePageParser $translatablePageParser,
-		LinkBatchFactory $linkBatchFactory,
-		JobQueueGroup $jobQueueGroup
+		LinkBatchFactory $linkBatchFactory
 	) {
 		parent::__construct( 'PageTranslation' );
 		$this->languageNameUtils = $languageNameUtils;
@@ -86,7 +80,6 @@ class PageTranslationSpecialPage extends SpecialPage {
 		$this->translationUnitStoreFactory = $translationUnitStoreFactory;
 		$this->translatablePageParser = $translatablePageParser;
 		$this->linkBatchFactory = $linkBatchFactory;
-		$this->jobQueueGroup = $jobQueueGroup;
 	}
 
 	public function doesWrites(): bool {
@@ -103,7 +96,7 @@ class PageTranslationSpecialPage extends SpecialPage {
 		$user = $this->getUser();
 		$request = $this->getRequest();
 
-		$target = $request->getText( 'target', $parameters ?? '' );
+		$target = $request->getText( 'target', $parameters );
 		$revision = $request->getInt( 'revision', 0 );
 		$action = $request->getVal( 'do' );
 		$out = $this->getOutput();
@@ -139,8 +132,7 @@ class PageTranslationSpecialPage extends SpecialPage {
 		}
 
 		// Check token for all POST actions here
-		$csrfTokenSet = $this->getContext()->getCsrfTokenSet();
-		if ( $request->wasPosted() && !$csrfTokenSet->matchTokenField( 'token' ) ) {
+		if ( $request->wasPosted() && !$user->matchEditToken( $request->getText( 'token' ) ) ) {
 			throw new PermissionsError( 'pagetranslation' );
 		}
 
@@ -194,7 +186,7 @@ class PageTranslationSpecialPage extends SpecialPage {
 			$sharedGroupIds = MessageGroups::getSharedGroups( $group );
 			if ( $sharedGroupIds !== [] ) {
 				$job = MessageGroupStatsRebuildJob::newRefreshGroupsJob( $sharedGroupIds );
-				$this->jobQueueGroup->push( $job );
+				TranslateUtils::getJobQueueGroup()->push( $job );
 			}
 
 			// Show updated page with a notice
@@ -211,7 +203,7 @@ class PageTranslationSpecialPage extends SpecialPage {
 				$title
 			);
 
-			$status = MediaWikiServices::getInstance()->getWikiPageFactory()->newFromTitle( $title )->doUserEditContent(
+			$status = WikiPage::factory( $title )->doUserEditContent(
 				$content,
 				$this->getUser(),
 				$this->msg( 'tpt-unlink-summary' )->inContentLanguage()->text(),
@@ -281,14 +273,14 @@ class PageTranslationSpecialPage extends SpecialPage {
 		if ( $page->getReadyTag() !== $title->getLatestRevID() ) {
 			$out->wrapWikiMsg(
 				Html::errorBox( '$1' ),
-				[ 'tpt-notsuitable', $title->getPrefixedText(), Message::plaintextParam( '<translate>' ) ]
+				[ 'tpt-notsuitable', $title->getPrefixedText() ]
 			);
 			$out->addWikiMsg( 'tpt-list-pages-in-translations' );
 
 			return;
 		}
 
-		$firstMark = $page->getMarkedTag() === null;
+		$firstMark = $page->getMarkedTag() === false;
 
 		$parse = $this->translatablePageParser->parse( $page->getText() );
 		[ $units, $deletedUnits ] = $this->prepareTranslationUnits( $page, $parse );
@@ -368,11 +360,11 @@ class PageTranslationSpecialPage extends SpecialPage {
 	protected function showGenericConfirmation( array $params ): void {
 		$formParams = [
 			'method' => 'post',
-			'action' => $this->getPageTitle()->getLocalURL(),
+			'action' => $this->getPageTitle()->getFullURL(),
 		];
 
 		$params['title'] = $this->getPageTitle()->getPrefixedText();
-		$params['token'] = $this->getContext()->getCsrfTokenSet()->getToken();
+		$params['token'] = $this->getUser()->getEditToken();
 
 		$hidden = '';
 		foreach ( $params as $key => $value ) {
@@ -394,7 +386,7 @@ class PageTranslationSpecialPage extends SpecialPage {
 	protected function showUnlinkConfirmation( Title $target ): void {
 		$formParams = [
 			'method' => 'post',
-			'action' => $this->getPageTitle()->getLocalURL(),
+			'action' => $this->getPageTitle()->getFullURL(),
 		];
 
 		$this->getOutput()->addHTML(
@@ -402,7 +394,7 @@ class PageTranslationSpecialPage extends SpecialPage {
 			Html::hidden( 'do', 'unlink' ) .
 			Html::hidden( 'title', $this->getPageTitle()->getPrefixedText() ) .
 			Html::hidden( 'target', $target->getPrefixedText() ) .
-			Html::hidden( 'token', $this->getContext()->getCsrfTokenSet()->getToken() ) .
+			Html::hidden( 'token', $this->getUser()->getEditToken() ) .
 			$this->msg( 'tpt-unlink-confirm', $target->getPrefixedText() )->parseAsBlock() .
 			Xml::submitButton(
 				$this->msg( 'tpt-unlink-button' )->text(),
@@ -656,43 +648,39 @@ class PageTranslationSpecialPage extends SpecialPage {
 		return '<div>' . implode( $messageCache['pipe-separator'], $actions ) . '</div>';
 	}
 
-	/**
-	 * Validate translation unit IDs.
-	 * @param TranslationUnit[] $units
-	 * @return bool Whether there were any errors
-	 */
-	private function validateUnitIds( array $units ): bool {
+	public function validateUnitIds( array $units ): bool {
 		$usedNames = [];
-		$status = Status::newGood();
+		$error = false;
 
 		$ic = preg_quote( TranslationUnit::UNIT_MARKER_INVALID_CHARS, '~' );
 		foreach ( $units as $s ) {
 			if ( preg_match( "~[$ic]~", $s->id ) ) {
-				$status->fatal( 'tpt-invalid', $s->id );
+				$this->getOutput()->addElement(
+					'p',
+					[ 'class' => 'errorbox' ],
+					$this->msg( 'tpt-invalid' )->params( $s->id )->text()
+				);
+				$error = true;
 			}
 
 			// We need to do checks for both new and existing units.
 			// Someone might have tampered with the page source adding
 			// duplicate or invalid markers.
-			if ( isset( $usedNames[$s->id] ) ) {
-				// If the same ID is used three or more times, the same
-				// error will be added more than once, but that's okay,
-				// Status::fatal will deduplicate
-				$status->fatal( 'tpt-duplicate', $s->id );
+			$usedNames[$s->id] = ( $usedNames[$s->id] ?? 0 ) + 1;
+		}
+		foreach ( $usedNames as $name => $count ) {
+			if ( $count > 1 ) {
+				// Only show error once per duplicated translation unit
+				$this->getOutput()->addElement(
+					'p',
+					[ 'class' => 'errorbox' ],
+					$this->msg( 'tpt-duplicate' )->params( $name )->text()
+				);
+				$error = true;
 			}
-			$usedNames[$s->id] = true;
 		}
 
-		if ( $status->isOK() ) {
-			return false;
-		} else {
-			$this->getOutput()->addHTML(
-				Html::errorBox(
-					$status->getHTML( false, false, $this->getLanguage() )
-				)
-			);
-			return true;
-		}
+		return $error;
 	}
 
 	/** @return TranslationUnit[][] */
@@ -757,7 +745,7 @@ class PageTranslationSpecialPage extends SpecialPage {
 
 		$formParams = [
 			'method' => 'post',
-			'action' => $this->getPageTitle()->getLocalURL(),
+			'action' => $this->getPageTitle()->getFullURL(),
 			'class' => 'mw-tpt-sp-markform',
 		];
 
@@ -767,7 +755,7 @@ class PageTranslationSpecialPage extends SpecialPage {
 			Html::hidden( 'title', $this->getPageTitle()->getPrefixedText() ) .
 			Html::hidden( 'revision', $page->getRevision() ) .
 			Html::hidden( 'target', $page->getTitle()->getPrefixedText() ) .
-			Html::hidden( 'token', $this->getContext()->getCsrfTokenSet()->getToken() )
+			Html::hidden( 'token', $this->getUser()->getEditToken() )
 		);
 
 		$out->wrapWikiMsg( '==$1==', 'tpt-sections-oldnew' );
@@ -883,7 +871,7 @@ class PageTranslationSpecialPage extends SpecialPage {
 		}
 
 		// Display template changes if applicable
-		if ( $page->getMarkedTag() !== null ) {
+		if ( $page->getMarkedTag() !== false ) {
 			$hasChanges = true;
 			$newTemplate = $parse->sourcePageTemplateForDiffs();
 			$oldPage = TranslatablePage::newFromRevision(
@@ -953,9 +941,6 @@ class PageTranslationSpecialPage extends SpecialPage {
 		$storedLanguages = (string)TranslateMetadata::get( $groupId, 'prioritylangs' );
 		$default = $storedLanguages !== '' ? explode( ',', $storedLanguages ) : [];
 
-		$priorityReason = TranslateMetadata::get( $groupId, 'priorityreason' );
-		$priorityReason = $priorityReason !== false ? $priorityReason : '';
-
 		$form = new FieldsetLayout( [
 			'items' => [
 				new FieldLayout(
@@ -984,7 +969,6 @@ class PageTranslationSpecialPage extends SpecialPage {
 				new FieldLayout(
 					new TextInputWidget( [
 						'name' => 'priorityreason',
-						'value' => $priorityReason
 					] ),
 					[
 						'label' => $this->msg( 'tpt-select-prioritylangs-reason' )->text(),
@@ -1068,7 +1052,7 @@ class PageTranslationSpecialPage extends SpecialPage {
 		bool $transclusion
 	) {
 		// Add the section markers to the source page
-		$wikiPage = MediaWikiServices::getInstance()->getWikiPageFactory()->newFromTitle( $page->getTitle() );
+		$wikiPage = WikiPage::factory( $page->getTitle() );
 		$content = ContentHandler::makeContent(
 			$parse->sourcePageTextForSaving(),
 			$page->getTitle()
@@ -1149,7 +1133,7 @@ class PageTranslationSpecialPage extends SpecialPage {
 		MessageIndex::singleton()->storeInterim( $group, $newKeys );
 
 		$job = TranslationsUpdateJob::newFromPage( $page, $sections );
-		$this->jobQueueGroup->push( $job );
+		TranslateUtils::getJobQueueGroup()->push( $job );
 
 		$this->handlePriorityLanguages( $this->getRequest(), $page );
 

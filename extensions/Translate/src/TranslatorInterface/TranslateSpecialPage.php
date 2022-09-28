@@ -17,6 +17,7 @@ use MWException;
 use Skin;
 use SpecialPage;
 use TranslateUtils;
+use TuxMessageTable;
 use Xml;
 
 /**
@@ -94,7 +95,7 @@ class TranslateSpecialPage extends SpecialPage {
 		$out->addHTML( $this->tuxSettingsForm() );
 		$out->addHTML( $this->messageSelector() );
 
-		$table = new MessageTable( $this->getContext(), $this->group, $this->options['language'] );
+		$table = new TuxMessageTable( $this->getContext(), $this->group, $this->options['language'] );
 		$output = $table->fullTable();
 
 		$out->addHTML( $output );
@@ -174,10 +175,10 @@ class TranslateSpecialPage extends SpecialPage {
 	}
 
 	protected function tuxSettingsForm(): string {
-		$nojs = Html::errorBox(
-			$this->msg( 'tux-nojs' )->plain(),
-			'',
-			'tux-nojs'
+		$nojs = Html::element(
+			'div',
+			[ 'class' => 'tux-nojs errorbox' ],
+			$this->msg( 'tux-nojs' )->plain()
 		);
 
 		$attrs = [ 'class' => 'row tux-editor-header' ];
@@ -393,13 +394,10 @@ class TranslateSpecialPage extends SpecialPage {
 
 	/**
 	 * Adds the task-based tabs on Special:Translate and few other special pages.
-	 * Hook: SkinTemplateNavigation::Universal
+	 * Hook: SkinTemplateNavigation::SpecialPage
 	 */
 	public static function tabify( Skin $skin, array &$tabs ): bool {
 		$title = $skin->getTitle();
-		if ( !$title->isSpecialPage() ) {
-			return true;
-		}
 		[ $alias, $sub ] = MediaWikiServices::getInstance()
 			->getSpecialPageFactory()->resolveAlias( $title->getText() );
 

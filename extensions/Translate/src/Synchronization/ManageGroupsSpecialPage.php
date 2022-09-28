@@ -10,7 +10,6 @@ use DisabledSpecialPage;
 use Exception;
 use FileBasedMessageGroup;
 use Html;
-use JobQueueGroup;
 use Language;
 use LinkBatch;
 use MediaWiki\Extension\Translate\MessageSync\MessageSourceChange;
@@ -66,15 +65,12 @@ class ManageGroupsSpecialPage extends SpecialPage {
 	private $synchronizationCache;
 	/** @var DisplayGroupSynchronizationInfo */
 	private $displayGroupSyncInfo;
-	/** @var JobQueueGroup */
-	private $jobQueueGroup;
 
 	public function __construct(
 		Language $contLang,
 		NamespaceInfo $nsInfo,
 		RevisionLookup $revLookup,
-		GroupSynchronizationCache $synchronizationCache,
-		JobQueueGroup $jobQueueGroup
+		GroupSynchronizationCache $synchronizationCache
 	) {
 		// Anyone is allowed to see, but actions are restricted
 		parent::__construct( 'ManageMessageGroups' );
@@ -83,7 +79,6 @@ class ManageGroupsSpecialPage extends SpecialPage {
 		$this->revLookup = $revLookup;
 		$this->synchronizationCache = $synchronizationCache;
 		$this->displayGroupSyncInfo = new DisplayGroupSynchronizationInfo( $this, $this->getLinkRenderer() );
-		$this->jobQueueGroup = $jobQueueGroup;
 	}
 
 	public function doesWrites() {
@@ -144,8 +139,8 @@ class ManageGroupsSpecialPage extends SpecialPage {
 			return;
 		}
 
-		$csrfTokenSet = $this->getContext()->getCsrfTokenSet();
-		if ( !$this->hasRight || !$csrfTokenSet->matchTokenField( 'token' ) ) {
+		$token = $req->getVal( 'token' );
+		if ( !$this->hasRight || !$user->matchEditToken( $token ) ) {
 			throw new PermissionsError( self::RIGHT );
 		}
 
@@ -188,7 +183,7 @@ class ManageGroupsSpecialPage extends SpecialPage {
 			Html::hidden( 'title', $this->getPageTitle()->getPrefixedText(), [
 				'id' => 'smgPageTitle'
 			] ) .
-			Html::hidden( 'token', $this->getContext()->getCsrfTokenSet()->getToken() ) .
+			Html::hidden( 'token', $this->getUser()->getEditToken() ) .
 			Html::hidden( 'changesetModifiedTime',
 				MessageChangeStorage::getLastModifiedTime( $this->cdb ) ) .
 			$this->getLegend()
@@ -335,7 +330,7 @@ class ManageGroupsSpecialPage extends SpecialPage {
 				);
 			}
 
-			$oldContent = ContentHandler::makeContent( (string)$wiki, $title );
+			$oldContent = ContentHandler::makeContent( $wiki, $title );
 			$newContent = ContentHandler::makeContent( '', $title );
 			$this->diff->setContent( $oldContent, $newContent );
 			$text = $this->diff->getDiff( $titleLink, '', $noticeHtml );
@@ -375,22 +370,20 @@ class ManageGroupsSpecialPage extends SpecialPage {
 			}
 
 			$oldContent = ContentHandler::makeContent( '', $title );
-			$newContent = ContentHandler::makeContent( (string)$params['content'], $title );
+			$newContent = ContentHandler::makeContent( $params['content'], $title );
 			$this->diff->setContent( $oldContent, $newContent );
 			$text = $this->diff->getDiff( '', $titleLink . $menu, $noticeHtml );
 		} elseif ( $type === 'change' ) {
 			$wiki = TranslateUtils::getContentForTitle( $title, true );
 
 			$actions = '';
+			$importSelected = true;
 			$sourceLanguage = $group->getSourceLanguage();
 
-			// Option to fuzzy is only available for source languages, and should be used
-			// if content has changed.
-			$shouldFuzzy = $sourceLanguage === $language && $wiki !== $params['content'];
-
 			if ( $sourceLanguage === $language ) {
+				$importSelected = false;
 				$label = $this->msg( 'translate-manage-action-fuzzy' )->text();
-				$actions .= Xml::radioLabel( $label, "msg/$id", "fuzzy", "f/$id", $shouldFuzzy );
+				$actions .= Xml::radioLabel( $label, "msg/$id", "fuzzy", "f/$id", true );
 			}
 
 			if (
@@ -408,15 +401,15 @@ class ManageGroupsSpecialPage extends SpecialPage {
 				$limit--;
 			} else {
 				$label = $this->msg( 'translate-manage-action-import' )->text();
-				$actions .= Xml::radioLabel( $label, "msg/$id", "import", "imp/$id", !$shouldFuzzy );
+				$actions .= Xml::radioLabel( $label, "msg/$id", "import", "imp/$id", $importSelected );
 
 				$label = $this->msg( 'translate-manage-action-ignore' )->text();
 				$actions .= Xml::radioLabel( $label, "msg/$id", "ignore", "i/$id" );
 				$limit--;
 			}
 
-			$oldContent = ContentHandler::makeContent( (string)$wiki, $title );
-			$newContent = ContentHandler::makeContent( (string)$params['content'], $title );
+			$oldContent = ContentHandler::makeContent( $wiki, $title );
+			$newContent = ContentHandler::makeContent( $params['content'], $title );
 
 			$this->diff->setContent( $oldContent, $newContent );
 			$text .= $this->diff->getDiff( $titleLink, $actions, $noticeHtml );
@@ -516,11 +509,10 @@ class ManageGroupsSpecialPage extends SpecialPage {
 
 		if ( $errorGroups ) {
 			$errorMsg = $this->getProcessingErrorMessage( $errorGroups, count( $groups ) );
-			$out->addHTML(
-				Html::warningBox(
-					$errorMsg,
-					'mw-translate-smg-submitted'
-				)
+			$out->addElement(
+				'p',
+				[ 'class' => 'warningbox mw-translate-smg-submitted' ],
+				$errorMsg
 			);
 		}
 
@@ -548,13 +540,10 @@ class ManageGroupsSpecialPage extends SpecialPage {
 
 	/**
 	 * Adds the task-based tabs on Special:Translate and few other special pages.
-	 * Hook: SkinTemplateNavigation::Universal
+	 * Hook: SkinTemplateNavigation::SpecialPage
 	 */
 	public static function tabify( Skin $skin, array &$tabs ): void {
 		$title = $skin->getTitle();
-		if ( !$title->isSpecialPage() ) {
-			return;
-		}
 		$specialPageFactory = MediaWikiServices::getInstance()->getSpecialPageFactory();
 		[ $alias, ] = $specialPageFactory->resolveAlias( $title->getText() );
 
@@ -708,8 +697,8 @@ class ManageGroupsSpecialPage extends SpecialPage {
 		}
 		$limit--;
 
-		$addedContent = ContentHandler::makeContent( (string)$addedMsg['content'], $addedTitle );
-		$deletedContent = ContentHandler::makeContent( (string)$deletedMsg['content'], $deletedTitle );
+		$addedContent = ContentHandler::makeContent( $addedMsg['content'], $addedTitle );
+		$deletedContent = ContentHandler::makeContent( $deletedMsg['content'], $deletedTitle );
 		$this->diff->setContent( $deletedContent, $addedContent );
 
 		$menu = '';
@@ -1038,7 +1027,7 @@ class ManageGroupsSpecialPage extends SpecialPage {
 		$renameGroupIds = array_keys( array_filter( $renameJobs ) );
 		$uniqueGroupIds = array_unique( array_merge( $modificationGroupIds, $renameGroupIds ) );
 		$messageIndexInstance = MessageIndex::singleton();
-		$jobQueueInstance = $this->jobQueueGroup;
+		$jobQueueInstance = TranslateUtils::getJobQueueGroup();
 
 		foreach ( $uniqueGroupIds as $groupId ) {
 			$messages = [];

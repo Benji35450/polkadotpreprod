@@ -16,6 +16,7 @@ use MediaWiki\Languages\LanguageNameUtils;
 use MediaWiki\Logger\LoggerFactory;
 use ObjectCache;
 use SpecialPage;
+use StatsTable;
 use Title;
 use Wikimedia\Rdbms\ILoadBalancer;
 
@@ -92,13 +93,10 @@ class ActiveLanguagesSpecialPage extends SpecialPage {
 
 		$this->outputHeader( 'supportedlanguages-summary' );
 		$dbr = $this->loadBalancer->getConnectionRef( DB_REPLICA );
-		$dbType = $dbr->getType();
-		if ( $dbType === 'sqlite' || $dbType === 'postgres' ) {
-			$out->addHTML(
-				Html::errorBox(
-					// Messages used: supportedlanguages-sqlite-error, supportedlanguages-postgres-error
-					$out->msg( 'supportedlanguages-' . $dbType . '-error' )->parse()
-				)
+		if ( $dbr->getType() === 'sqlite' ) {
+			$out->wrapWikiMsg(
+				'<div class="errorbox">$1</div>',
+				'supportedlanguages-sqlite-error'
 			);
 			return;
 		}
@@ -214,7 +212,8 @@ class ActiveLanguagesSpecialPage extends SpecialPage {
 		$fields = [ 'substring_index(rc_title, \'/\', -1) as lang', 'count(*) as count' ];
 		$timestamp = $dbr->timestamp( wfTimestamp( TS_UNIX ) - 60 * 60 * 24 * $this->period );
 		$conds = [
-			'rc_timestamp > ' . $dbr->addQuotes( $timestamp ),
+			# Without the quotes the rc_timestamp index isn't used and this query is much slower
+			"rc_timestamp > '$timestamp'",
 			'rc_namespace' => $this->options->get( 'TranslateMessageNamespaces' ),
 			'rc_title' . $dbr->buildLike( $dbr->anyString(), '/', $dbr->anyString() ),
 		];

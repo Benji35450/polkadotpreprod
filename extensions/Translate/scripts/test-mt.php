@@ -7,9 +7,6 @@
  * @file
  */
 
-use MediaWiki\Extension\Translate\WebService\QueryAggregator;
-use MediaWiki\Extension\Translate\WebService\TranslationWebService;
-
 // Standard boilerplate to define $IP
 if ( getenv( 'MW_INSTALL_PATH' ) !== false ) {
 	$IP = getenv( 'MW_INSTALL_PATH' );
@@ -84,6 +81,9 @@ class TestMT extends Maintenance {
 		$id = $agg->addQuery( $query[ 0 ] );
 		$agg->run();
 		$res = $agg->getResponse( $id );
+		if ( $res === null ) {
+			$this->fatalError( "Service response error.\n" );
+		}
 
 		$this->output( $service->getResultData( $res ), 1 );
 	}

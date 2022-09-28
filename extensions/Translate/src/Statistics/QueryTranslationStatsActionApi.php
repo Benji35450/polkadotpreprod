@@ -6,8 +6,6 @@ namespace MediaWiki\Extension\Translate\Statistics;
 use ApiBase;
 use ApiMain;
 use MediaWiki\Extension\Translate\Services;
-use Wikimedia\ParamValidator\ParamValidator;
-use Wikimedia\ParamValidator\TypeDef\IntegerDef;
 
 /**
  * Api module for querying translation statistics
@@ -44,31 +42,31 @@ class QueryTranslationStatsActionApi extends ApiBase {
 	protected function getAllowedParams() {
 		return [
 			'count' => [
-				ParamValidator::PARAM_TYPE => $this->dataProvider->getGraphTypes(),
-				ParamValidator::PARAM_REQUIRED => true,
+				ApiBase::PARAM_TYPE => $this->dataProvider->getGraphTypes(),
+				ApiBase::PARAM_REQUIRED => true,
 			],
 			'days' => [
-				ParamValidator::PARAM_TYPE => 'integer',
-				ParamValidator::PARAM_REQUIRED => true,
-				ParamValidator::PARAM_DEFAULT => 30,
-				IntegerDef::PARAM_MIN => 1,
-				IntegerDef::PARAM_MAX => 10000,
+				ApiBase::PARAM_TYPE => 'integer',
+				ApiBase::PARAM_REQUIRED => true,
+				ApiBase::PARAM_DFLT => 30,
+				ApiBase::PARAM_MIN => 1,
+				ApiBase::PARAM_MAX => 10000,
 				ApiBase::PARAM_RANGE_ENFORCE => true
 			],
 			'group' => [
-				ParamValidator::PARAM_TYPE => 'string',
-				ParamValidator::PARAM_ISMULTI => true
+				ApiBase::PARAM_TYPE => 'string',
+				ApiBase::PARAM_ISMULTI => true
 			],
 			'language' => [
-				ParamValidator::PARAM_TYPE => 'string',
-				ParamValidator::PARAM_ISMULTI => true
+				ApiBase::PARAM_TYPE => 'string',
+				ApiBase::PARAM_ISMULTI => true
 			],
 			'scale' => [
-				ParamValidator::PARAM_TYPE => TranslationStatsGraphOptions::VALID_SCALES,
-				ParamValidator::PARAM_DEFAULT => 'days'
+				ApiBase::PARAM_TYPE => TranslationStatsGraphOptions::VALID_SCALES,
+				ApiBase::PARAM_DFLT => 'days'
 			],
 			'start' => [
-				ParamValidator::PARAM_TYPE => 'timestamp'
+				ApiBase::PARAM_TYPE => 'timestamp'
 			]
 		];
 	}

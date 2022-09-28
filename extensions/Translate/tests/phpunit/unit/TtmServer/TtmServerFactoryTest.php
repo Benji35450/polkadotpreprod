@@ -14,28 +14,15 @@ use MediaWikiUnitTestCase;
  */
 class TtmServerFactoryTest extends MediaWikiUnitTestCase {
 	public function testGetNames() {
-		$factory = new TtmServerFactory(
-			[
-				'one' => [ 'type' => 'ttmserver' ],
-				'two' => [ 'type' => 'remote-ttmserver' ],
-				'three' => []
-			]
-		);
+		$factory = new TtmServerFactory( [ 'one' => [], 'two' => [] ] );
 		$actual = $factory->getNames();
 		$this->assertArrayEquals( [ 'one', 'two' ], $actual );
 	}
 
 	public function testHas() {
-		$factory = new TtmServerFactory(
-			[
-				'exists' => [],
-				'one' => [ 'type' => 'ttmserver' ],
-			],
-			'one'
-		);
+		$factory = new TtmServerFactory( [ 'exists' => [] ], 'exists' );
 		$this->assertFalse( $factory->has( 'unknown' ) );
-		$this->assertFalse( $factory->has( 'exists' ) );
-		$this->assertTrue( $factory->has( 'one' ) );
+		$this->assertTrue( $factory->has( 'exists' ) );
 	}
 
 	public function testCreate() {

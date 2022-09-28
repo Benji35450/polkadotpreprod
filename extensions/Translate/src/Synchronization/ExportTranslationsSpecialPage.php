@@ -8,15 +8,12 @@ use GettextFFS;
 use Html;
 use HTMLForm;
 use LogicException;
-use MediaWiki\MediaWikiServices;
 use Message;
 use MessageCollection;
 use MessageGroup;
 use MessageGroups;
-use MessageHandle;
 use SpecialPage;
 use Status;
-use Title;
 use TranslatablePage;
 use TranslateUtils;
 use WikiPageMessageGroup;
@@ -39,7 +36,7 @@ class ExportTranslationsSpecialPage extends SpecialPage {
 	/** @var string */
 	protected $groupId;
 	/** @var string[] */
-	private const VALID_FORMATS = [ 'export-as-po', 'export-to-file', 'export-as-csv' ];
+	public static $validFormats = [ 'export-as-po', 'export-to-file' ];
 
 	public function __construct() {
 		parent::__construct( 'ExportTranslations' );
@@ -53,7 +50,7 @@ class ExportTranslationsSpecialPage extends SpecialPage {
 
 		$this->setHeaders();
 
-		$this->groupId = $request->getText( 'group', $par ?? '' );
+		$this->groupId = $request->getText( 'group', $par );
 		$this->language = $request->getVal( 'language', $lang->getCode() );
 		$this->format = $request->getText( 'format' );
 
@@ -143,7 +140,7 @@ class ExportTranslationsSpecialPage extends SpecialPage {
 	/** @return string[] */
 	private function getFormatOptions(): array {
 		$options = [];
-		foreach ( self::VALID_FORMATS as $format ) {
+		foreach ( self::$validFormats as $format ) {
 			// translate-taskui-export-to-file, translate-taskui-export-as-po
 			$options[ $this->msg( "translate-taskui-$format" )->escaped() ] = $format;
 		}
@@ -165,13 +162,12 @@ class ExportTranslationsSpecialPage extends SpecialPage {
 			$status->fatal( 'translate-page-no-such-language' );
 		}
 
-		// Do not show this error if invalid format is specified for translatable page
-		// groups as we can show a textarea box containing the translation page text
+		// Do not show this error if no/invalid format is specified for translatable
+		// page groups as we can show a textarea box containing the translation page text
 		// (however it's not currently supported for other groups).
 		if (
 			!$msgGroup instanceof WikiPageMessageGroup
-			&& $this->format
-			&& !in_array( $this->format, self::VALID_FORMATS )
+			&& !in_array( $this->format, self::$validFormats )
 		) {
 			$status->fatal( 'translate-export-invalid-format' );
 		}
@@ -228,31 +224,18 @@ class ExportTranslationsSpecialPage extends SpecialPage {
 			case 'export-to-file':
 				$out->disable();
 
-				// This will never happen since its checked previously but add the check to keep
-				// phan and IDE happy. See checkInput method
-				if ( !$group instanceof FileBasedMessageGroup ) {
-					throw new LogicException(
-						"'export-to-file' requested for a non FileBasedMessageGroup {$group->getId()}"
-					);
-				}
-
+				'@phan-var FileBasedMessageGroup $group';
 				$filename = basename( $group->getSourceFilePath( $collection->getLanguage() ) );
 				$this->sendExportHeaders( $filename );
 
 				echo $group->getFFS()->writeIntoVariable( $collection );
 				break;
 
-			case 'export-as-csv':
-				$out->disable();
-				$filename = "{$group->getId()}_{$this->language}.csv";
-				$this->sendExportHeaders( $filename );
-				$this->exportCSV( $collection, $group->getSourceLanguage() );
-				break;
-
 			default:
 				// @todo Add web viewing for groups other than WikiPageMessageGroup
 				if ( !$group instanceof WikiPageMessageGroup ) {
-					return;
+					// This should have been prevented at validation. See checkInput().
+					throw new LogicException( 'Unexpected export format.' );
 				}
 
 				$translatablePage = TranslatablePage::newFromTitle( $group->getTitle() );
@@ -298,42 +281,6 @@ class ExportTranslationsSpecialPage extends SpecialPage {
 		$response = $this->getRequest()->response();
 		$response->header( 'Content-Type: text/plain; charset=UTF-8' );
 		$response->header( "Content-Disposition: attachment; filename=\"$fileName\"" );
-	}
-
-	private function exportCSV( MessageCollection $collection, string $sourceLanguageCode ): void {
-		$fp = fopen( 'php://output', 'w' );
-		$exportingSourceLanguage = $sourceLanguageCode === $this->language;
-
-		$header = [
-			$this->msg( 'translate-export-csv-message-title' )->text(),
-			$this->msg( 'translate-export-csv-definition' )->text()
-		];
-
-		if ( !$exportingSourceLanguage ) {
-			$header[] = $this->language;
-		}
-
-		fputcsv( $fp, $header );
-
-		$titleFormatter = MediaWikiServices::getInstance()->getTitleFormatter();
-
-		foreach ( $collection->keys() as $messageKey => $titleValue ) {
-			$message = $collection[ $messageKey ];
-			$prefixedTitleText = $titleFormatter->getPrefixedText( $titleValue );
-
-			$handle = new MessageHandle( Title::newFromText( $prefixedTitleText ) );
-			$sourceLanguageTitle = $handle->getTitleForLanguage( $sourceLanguageCode );
-
-			$row = [ $sourceLanguageTitle->getPrefixedText(), $message->definition() ];
-
-			if ( !$exportingSourceLanguage ) {
-				$row[] = $message->translation();
-			}
-
-			fputcsv( $fp, $row );
-		}
-
-		fclose( $fp );
 	}
 
 	protected function getGroupName() {

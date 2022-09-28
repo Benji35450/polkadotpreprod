@@ -6,11 +6,11 @@
 			"LNDDYL",
 			"Lakejason0",
 			"Liuxinyu970226",
-			"Tr jason",
 			"TsuyaMarisa",
 			"VulpesVulpes825",
 			"Xiplus",
-			"Yfdyh000"
+			"Yfdyh000",
+			"Tr jason"
 		]
 	},
 	"apihelp-aggregategroups-description": "管理聚合消息组。\n\n您可以添加和移除聚合消息组，以及从组中关联或分离消息（一次一个）。",

@@ -4,20 +4,6 @@
 ( function () {
 	'use strict';
 
-	function getEditSummaryTimeWithDiff( pageTitle, comment ) {
-		var diffLink = mw.util.getUrl( pageTitle, {
-			oldid: comment.revisionId,
-			diff: 'prev'
-		} );
-
-		return $( '<a>' )
-			.addClass( 'three columns text-right edit-summary-time' )
-			.attr(
-				{ href: diffLink }
-			)
-			.text( comment.humanTimestamp );
-	}
-
 	var translateEditorHelpers = {
 		showDocumentationEditor: function () {
 			var $infoColumnBlock = this.$editor.find( '.infocolumn-block' ),
@@ -345,28 +331,13 @@
 				return;
 			}
 
-			var currentSuggestionsOrder = [];
 			Object.keys( suggestions ).forEach( function ( key ) {
-				currentSuggestionsOrder.push( {
-					key: key,
-					count: suggestions[ key ].count,
-					quality: suggestions[ key ].sources[ 0 ].quality
-				} );
-			} );
+				var suggestion = suggestions[ key ];
 
-			currentSuggestionsOrder.sort( function ( a, b ) {
-				if ( a.quality === b.quality ) {
-					return b.count - a.count;
-				}
-				return a.quality < b.quality ? 1 : -1;
-			} );
-
-			currentSuggestionsOrder.forEach( function ( item ) {
-				var currentSuggestion = suggestions[ item.key ];
-				currentSuggestion.$showSourcesElement.on( 'click', function ( e ) {
-					this.onShowTranslationMemorySources( e, currentSuggestion );
+				suggestion.$showSourcesElement.on( 'click', function ( e ) {
+					this.onShowTranslationMemorySources( e, suggestion );
 				}.bind( this ) );
-				$tmSuggestions.append( currentSuggestion.$element );
+				$tmSuggestions.append( suggestion.$element );
 			}, this );
 
 			$heading.removeClass( 'hide' );
@@ -545,70 +516,6 @@
 		},
 
 		/**
-		 * Loads and shows edit summaries
-		 *
-		 * @param {Array} editsummaries An array of edit summaries as returned by the API
-		 */
-		showEditSummaries: function ( editsummaries ) {
-			if ( !editsummaries.length ) {
-				return;
-			}
-
-			var $editSummariesContainer = this.$editor.find( '.edit-summaries' );
-
-			if ( !$editSummariesContainer.length ) {
-				$editSummariesContainer = $( '<div>' ).addClass( 'edit-summaries' );
-			}
-			var $editSummariesTitle = this.$editor.find( '.edit-summaries-title' );
-			$editSummariesTitle.after( $editSummariesContainer );
-			var $summaryList = $( '<ul>' ).addClass( 'edit-summaries-list' );
-			var lastEmptySummaryCount = 0;
-			var pageTitle = this.message.title;
-			editsummaries.forEach( function ( comment ) {
-				var $summaryListItem = $( '<li>' );
-
-				if ( comment.summary === '' ) {
-					var $lastSummaryItem = $summaryList.find( 'li' ).last();
-
-					// Last item added was an empty summary and the current one is also empty,
-					// so update that instead of adding a new one.
-					if ( $lastSummaryItem.hasClass( 'update-without-summary' ) ) {
-						$lastSummaryItem.find( 'span' ).text(
-							mw.msg(
-								'tux-editor-changes-without-summary',
-								mw.language.convertNumber( ++lastEmptySummaryCount )
-							)
-						);
-						// Remove the timestamp link if there is more than one empty summary.
-						$lastSummaryItem.find( '.edit-summary-time' ).remove();
-					} else {
-						// Add a new empty summary list item
-						$summaryList.append( $summaryListItem
-							.addClass( 'update-without-summary' )
-							.append( $( '<span>' )
-								.addClass( 'nine columns' )
-								.text( mw.msg(
-									'tux-editor-changes-without-summary',
-									mw.language.convertNumber( ++lastEmptySummaryCount ) ) ) )
-							.append( getEditSummaryTimeWithDiff( pageTitle, comment ) )
-						);
-					}
-				} else {
-					lastEmptySummaryCount = 0;
-					$summaryList.append( $summaryListItem.append( $( '<bdi>' )
-						.prop( 'lang', '' )
-						.addClass( 'nine columns edit-summaries-message' )
-						.html( comment.summary ) )
-						.append( getEditSummaryTimeWithDiff( pageTitle, comment ) )
-					);
-				}
-			} );
-
-			$editSummariesContainer.append( $summaryList );
-			$editSummariesTitle.removeClass( 'hide' );
-		},
-
-		/**
 		 * Loads and shows the translation helpers.
 		 */
 		showTranslationHelpers: function () {
@@ -618,8 +525,7 @@
 
 			api.get( {
 				action: 'translationaids',
-				title: this.message.title,
-				uselang: mw.config.get( 'wgUserLanguage' )
+				title: this.message.title
 			} ).done( function ( result ) {
 				this.$editor.find( '.infocolumn .loading' ).remove();
 
@@ -636,7 +542,6 @@
 				this.showSupportOptions( result.helpers.support );
 				this.addDefinitionDiff( result.helpers.definitiondiff );
 				this.addInsertables( result.helpers.insertables );
-				this.showEditSummaries( result.helpers.editsummaries );
 
 				// Load the possible warnings as soon as possible, do not wait
 				// for the user to make changes. Otherwise users might try confirming
@@ -659,10 +564,7 @@
 				this.$editor.find( '.infocolumn' ).append(
 					$( '<div>' )
 						.text( mw.msg( 'tux-editor-loading-failed', errorInfo ) )
-						// Added warningbox for MW < 1.38
-						.addClass(
-							'mw-message-box-warning mw-message-box warningbox tux-translation-aid-error'
-						)
+						.addClass( 'warningbox tux-translation-aid-error' )
 				);
 				mw.log.error( 'Error loading translation aids:', errorCode, results );
 			}.bind( this ) );

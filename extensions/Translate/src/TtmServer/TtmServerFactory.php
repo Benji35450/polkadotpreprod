@@ -28,19 +28,11 @@ class TtmServerFactory {
 
 	/** @return string[] */
 	public function getNames(): array {
-		$ttmServersIds = [];
-		foreach ( $this->configs as $serviceId => $config ) {
-			$type = $config['type'] ?? '';
-			if ( $type === 'ttmserver' || $type === 'remote-ttmserver' ) {
-				$ttmServersIds[] = $serviceId;
-			}
-		}
-		return $ttmServersIds;
+		return array_keys( $this->configs );
 	}
 
 	public function has( string $name ): bool {
-		$ttmServersIds = $this->getNames();
-		return in_array( $name, $ttmServersIds );
+		return isset( $this->configs[$name] );
 	}
 
 	public function create( string $name ): TTMServer {
@@ -68,7 +60,7 @@ class TtmServerFactory {
 			}
 		}
 
-		throw new ServiceCreationFailure( "Invalid configuration for name '$name': type not specified" );
+		throw new ServiceCreationFailure( "Invalid configuration for name '$name': neither class nor type specified" );
 	}
 
 	/** Return the primary service or a no-op fallback if primary cannot be constructed. */

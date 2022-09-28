@@ -156,7 +156,6 @@
 	"translate-statsf-submit": "プレビュー",
 	"translate-statsf-unknown-error": "不明なエラーが発生しました。",
 	"translate-tag-page-desc": "ウィキページ [[$2|$1]] に対する $3 ($4) からの翻訳です。",
-	"translate-tag-page-wikipage-desc": "ウィキページ [[$2]] に対する <bdi>$3</bdi> ($4) から <bdi>$5</bdi> ($6) への[[$1|翻訳]]",
 	"translate-sidebar-alltrans": "他言語での翻訳",
 	"translations": "全翻訳結果",
 	"translations-summary": "既存のすべての翻訳を表示するには下欄にメッセージ名を入力してください。",
@@ -208,7 +207,6 @@
 	"supportedlanguages-portallink": "[$1] $2 - $3",
 	"supportedlanguages-portallink-nocldr": "[$1] $2",
 	"supportedlanguages-sqlite-error": "SQLiteはサポートされていません",
-	"supportedlanguages-postgres-error": "PostgreSQLはサポートされていません",
 	"supportedlanguages-translators": "{{PLURAL:$2|{{GENDER:$3|翻訳者}}|翻訳者}}: $1",
 	"supportedlanguages-recenttranslations": "最近の翻訳",
 	"supportedlanguages-count": "合計 $1 {{PLURAL:$1|言語}}",
@@ -342,9 +340,6 @@
 	"tux-editor-edit-desc": "説明文を編集",
 	"tux-editor-add-desc": "説明文を追加",
 	"tux-editor-suggestions-title": "提案",
-	"tux-editor-latest-updates-title": "最近の更新",
-	"tux-editor-changes-without-summary": "要約がない $1 件の{{PLURAL:$1|更新}}",
-	"tux-editor-all-changes": "すべての更新履歴",
 	"tux-editor-in-other-languages": "他言語での翻訳",
 	"tux-editor-need-more-help": "助けが必要ですか?",
 	"tux-editor-ask-help": "詳細について質問する",
@@ -409,6 +404,5 @@
 	"translate-syntax-error": "翻訳に構文エラーが含まれています",
 	"tux-session-expired": "ログインしていない状態になっています。別のタブでログインしてください。できない場合は、未保存の翻訳をコピーしておいて、ログインして、このページに戻ってきて、翻訳ページに入り直してください。",
 	"tux-nojs": "このツールの動作には JavaScript が必要です。JavaScript が無効、作動していないもしくはブラウザーがサポートされていません。",
-	"specialpages-group-translation": "翻訳",
-	"log-action-filter-translationreview": "操作の種類:"
+	"specialpages-group-translation": "翻訳"
 }

@@ -64,12 +64,12 @@ class PrepareTranslatablePageSpecialPage extends SpecialPage {
 </div>
 HTML;
 		$output->addHTML( $out );
-		$output->addHTML(
-			Html::errorBox(
-				$this->msg( 'tux-nojs' )->plain(),
-				'',
-				'tux-nojs'
-			)
+
+		$nojs = Html::element(
+			'div',
+			[ 'class' => 'tux-nojs errorbox' ],
+			$this->msg( 'tux-nojs' )->plain()
 		);
+		$output->addHTML( $nojs );
 	}
 }

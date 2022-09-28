@@ -74,10 +74,10 @@ class ManageTranslatorSandboxSpecialPage extends SpecialPage {
 	private function showPage(): void {
 		$out = $this->getOutput();
 
-		$nojs = Html::errorBox(
-			$this->msg( 'tux-nojs' )->plain(),
-			'',
-			'tux-nojs'
+		$nojs = Html::element(
+			'div',
+			[ 'class' => 'tux-nojs errorbox' ],
+			$this->msg( 'tux-nojs' )->plain()
 		);
 		$out->addHTML( $nojs );
 

@@ -9,7 +9,6 @@ use DerivativeContext;
 use Html;
 use HTMLForm;
 use IContextSource;
-use JobQueueGroup;
 use MediaWiki\Cache\LinkBatchFactory;
 use Mediawiki\Languages\LanguageNameUtils;
 use MessageGroup;
@@ -18,6 +17,7 @@ use MessageGroupStats;
 use MessageGroupStatsRebuildJob;
 use ObjectCache;
 use SpecialPage;
+use StatsTable;
 use TranslateUtils;
 use WikiPageMessageGroup;
 
@@ -84,21 +84,17 @@ class LanguageStatsSpecialPage extends SpecialPage {
 	private $linkBatchFactory;
 	/** @var ProgressStatsTableFactory */
 	private $progressStatsTableFactory;
-	/** @var JobQueueGroup */
-	private $jobQueueGroup;
 
 	public function __construct(
 		LinkBatchFactory $linkBatchFactory,
 		ProgressStatsTableFactory $progressStatsTableFactory,
-		LanguageNameUtils $languageNameUtils,
-		JobQueueGroup $jobQueueGroup
+		LanguageNameUtils $languageNameUtils
 	) {
 		parent::__construct( 'LanguageStats' );
 		$this->totals = MessageGroupStats::getEmptyStats();
 		$this->linkBatchFactory = $linkBatchFactory;
 		$this->progressStatsTableFactory = $progressStatsTableFactory;
 		$this->languageNameUtils = $languageNameUtils;
-		$this->jobQueueGroup = $jobQueueGroup;
 	}
 
 	public function isIncludable() {
@@ -187,7 +183,8 @@ class LanguageStatsSpecialPage extends SpecialPage {
 					// already updated, so it is not much of an overhead.
 					$jobParams = $this->getCacheRebuildJobParameters( $this->target );
 					$jobParams[ 'purge' ] = $this->purge;
-					$this->jobQueueGroup->push( MessageGroupStatsRebuildJob::newJob( $jobParams ) );
+					$job = MessageGroupStatsRebuildJob::newJob( $jobParams );
+					TranslateUtils::getJobQueueGroup()->push( $job );
 
 					// $this->purge is only true if request was posted
 					if ( !$this->purge ) {

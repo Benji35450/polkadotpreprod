@@ -9,7 +9,6 @@
  */
 
 use MediaWiki\Extension\Translate\Services;
-use MediaWiki\MediaWikiServices;
 
 /**
  * Some general static methods for instantiating TTMServer and helpers.
@@ -131,7 +130,7 @@ abstract class TTMServer {
 	public static function onDelete( WikiPage $wikipage ) {
 		$handle = new MessageHandle( $wikipage->getTitle() );
 		$job = TTMServerMessageUpdateJob::newJob( $handle, 'delete' );
-		MediaWikiServices::getInstance()->getJobQueueGroup()->push( $job );
+		TranslateUtils::getJobQueueGroup()->push( $job );
 	}
 
 	/**
@@ -140,7 +139,7 @@ abstract class TTMServer {
 	 */
 	public static function onChange( MessageHandle $handle ) {
 		$job = TTMServerMessageUpdateJob::newJob( $handle, 'refresh' );
-		MediaWikiServices::getInstance()->getJobQueueGroup()->push( $job );
+		TranslateUtils::getJobQueueGroup()->push( $job );
 	}
 
 	/**
@@ -154,7 +153,7 @@ abstract class TTMServer {
 		}
 
 		$job = TTMServerMessageUpdateJob::newJob( $handle, 'rebuild' );
-		MediaWikiServices::getInstance()->getJobQueueGroup()->push( $job );
+		TranslateUtils::getJobQueueGroup()->push( $job );
 	}
 
 	/** @return string[] */

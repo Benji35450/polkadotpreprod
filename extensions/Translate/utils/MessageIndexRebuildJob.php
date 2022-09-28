@@ -9,7 +9,6 @@
  */
 
 use MediaWiki\Extension\Translate\Jobs\GenericTranslateJob;
-use MediaWiki\MediaWikiServices;
 
 /**
  * Job for rebuilding message index.
@@ -78,6 +77,6 @@ class MessageIndexRebuildJob extends GenericTranslateJob {
 
 	/** @deprecated Just push directly to the job queue */
 	public function insertIntoJobQueue(): void {
-		MediaWikiServices::getInstance()->getJobQueueGroup()->push( $this );
+		TranslateUtils::getJobQueueGroup()->push( $this );
 	}
 }

@@ -125,7 +125,7 @@ class TranslateUtils {
 	 * @param bool $addFuzzy Add the fuzzy tag if appropriate.
 	 * @return string|null
 	 */
-	public static function getContentForTitle( Title $title, $addFuzzy = false ): ?string {
+	public static function getContentForTitle( Title $title, $addFuzzy = false ) {
 		$store = MediaWikiServices::getInstance()->getRevisionStore();
 		$revision = $store->getRevisionByTitle( $title );
 
@@ -136,16 +136,17 @@ class TranslateUtils {
 		$content = $revision->getContent( SlotRecord::MAIN );
 		$wiki = ( $content instanceof TextContent ) ? $content->getText() : null;
 
-		// Either unexpected content type, or the revision content is hidden
-		if ( $wiki === null ) {
+		if ( !$wiki ) {
 			return null;
 		}
 
-		if ( $addFuzzy ) {
-			$handle = new MessageHandle( $title );
-			if ( $handle->isFuzzy() ) {
-				$wiki = TRANSLATE_FUZZY . str_replace( TRANSLATE_FUZZY, '', $wiki );
-			}
+		if ( !$addFuzzy ) {
+			return $wiki;
+		}
+
+		$handle = new MessageHandle( $title );
+		if ( $handle->isFuzzy() ) {
+			$wiki = TRANSLATE_FUZZY . str_replace( TRANSLATE_FUZZY, '', $wiki );
 		}
 
 		return $wiki;
@@ -366,6 +367,7 @@ class TranslateUtils {
 	 */
 	public static function assetPath( $path ) {
 		global $wgExtensionAssetsPath;
+		// @phan-suppress-next-line PhanPossiblyUndeclaredVariable
 		return "$wgExtensionAssetsPath/Translate/$path";
 	}
 
@@ -459,9 +461,18 @@ class TranslateUtils {
 			return false;
 		}
 
+		if ( method_exists( $lb, 'hasOrMadeRecentPrimaryChanges' ) ) {
+			// MW 1.37+
+			return PHP_SAPI === 'cli' ||
+				RequestContext::getMain()->getRequest()->wasPosted() ||
+				$lb->hasOrMadeRecentPrimaryChanges();
+		}
+
+		// MW >=1.36
 		return PHP_SAPI === 'cli' ||
 			RequestContext::getMain()->getRequest()->wasPosted() ||
-			$lb->hasOrMadeRecentPrimaryChanges();
+			// @phan-suppress-next-line PhanUndeclaredMethod
+			$lb->hasOrMadeRecentMasterChanges();
 	}
 
 	/**
@@ -543,50 +554,15 @@ class TranslateUtils {
 		return isset( $all[ $code ] );
 	}
 
-	public static function getTextFromTextContent( ?Content $content ): string {
-		if ( !$content ) {
-			throw new UnexpectedValueException( 'Expected $content to be TextContent, got null instead.' );
-		}
-
-		if ( $content instanceof TextContent ) {
-			return $content->getText();
-		}
-
-		throw new UnexpectedValueException( 'Expected $content to be TextContent, but got ' . get_class( $content ) );
-	}
-
 	/**
-	 * Returns all translations of a given message.
-	 * @param MessageHandle $handle Language code is ignored.
-	 * @return array ( string => array ( string, string ) ) Tuples of page
-	 * text and last author indexed by page name.
-	 * @since 2012-12-18
+	 * Helper class to provide backward compatibility
+	 * @return JobQueueGroup
 	 */
-	public static function getTranslations( MessageHandle $handle ): array {
-		$namespace = $handle->getTitle()->getNamespace();
-		$base = $handle->getKey();
-
-		$dbr = MediaWikiServices::getInstance()
-			->getDBLoadBalancer()
-			->getConnection( DB_REPLICA );
-
-		$titles = $dbr->newSelectQueryBuilder()
-			->select( 'page_title' )
-			->from( 'page' )
-			->where( [
-				'page_namespace' => $namespace,
-				'page_title ' . $dbr->buildLike( "$base/", $dbr->anyString() ),
-			] )
-			->caller( __METHOD__ )
-			->orderBy( 'page_title' )
-			->fetchFieldValues();
-
-		if ( $titles === [] ) {
-			return [];
+	public static function getJobQueueGroup(): JobQueueGroup {
+		if ( method_exists( MediaWikiServices::class, 'getJobQueueGroup' ) ) {
+			// MW 1.37+
+			return MediaWikiServices::getInstance()->getJobQueueGroup();
 		}
-
-		$pageInfo = self::getContents( $titles, $namespace );
-
-		return $pageInfo;
+		return JobQueueGroup::singleton();
 	}
 }

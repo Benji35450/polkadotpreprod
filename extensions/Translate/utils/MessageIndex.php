@@ -33,14 +33,10 @@ abstract class MessageIndex {
 	protected $interimCache;
 	/** @var WANObjectCache */
 	private $statusCache;
-	/** @var JobQueueGroup */
-	private $jobQueueGroup;
 
 	public function __construct() {
 		// TODO: Use dependency injection
-		$mwInstance = MediaWikiServices::getInstance();
-		$this->statusCache = $mwInstance->getMainWANObjectCache();
-		$this->jobQueueGroup = $mwInstance->getJobQueueGroup();
+		$this->statusCache = MediaWikiServices::getInstance()->getMainWANObjectCache();
 	}
 
 	/**
@@ -244,7 +240,7 @@ abstract class MessageIndex {
 				// Cache has a later timestamp. This may be caused due to
 				// job deduplication. Just in case, spin off a new job to clean up the cache.
 				$job = MessageIndexRebuildJob::newJob();
-				$this->jobQueueGroup->push( $job );
+				TranslateUtils::getJobQueueGroup()->push( $job );
 			}
 		}
 
@@ -369,7 +365,7 @@ abstract class MessageIndex {
 	 */
 	protected function clearMessageGroupStats( array $diff ) {
 		$job = MessageGroupStatsRebuildJob::newRefreshGroupsJob( $diff['values'] );
-		$this->jobQueueGroup->push( $job );
+		TranslateUtils::getJobQueueGroup()->push( $job );
 
 		foreach ( $diff['keys'] as $keys ) {
 			foreach ( $keys as $key => $data ) {

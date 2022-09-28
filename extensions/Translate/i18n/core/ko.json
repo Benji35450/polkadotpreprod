@@ -1,7 +1,6 @@
 {
 	"@metadata": {
 		"authors": [
-			"Bluehill",
 			"Bluemersen",
 			"Ellif",
 			"Ficell",
@@ -16,10 +15,11 @@
 			"Priviet",
 			"Revi",
 			"ToePeu",
-			"Twotwo2019",
 			"Ykhwong",
 			"관인생략",
-			"아라"
+			"아라",
+			"Twotwo2019",
+			"Bluehill"
 		]
 	},
 	"translate": "번역하기",
@@ -27,9 +27,6 @@
 	"translate-fuzzybot-desc": "이 계정은 미디어위키 [https://www.mediawiki.org/wiki/Special:MyLanguage/Extension:Translate 번역 확장 기능]이 번역 문서를 관리하기 위해 사용되는 시스템 계정입니다.\n이 계정은 미디어위키 소프트웨어의 일부이며 특정 사용자에 의해 통제되지 않습니다.",
 	"translate-taskui-export-to-file": "네이티브 형식으로 내보내기",
 	"translate-taskui-export-as-po": "오프라인 번역용으로 내보내기",
-	"translate-taskui-export-as-csv": "CSV 포맷으로 내보내기",
-	"translate-export-csv-message-title": "번역 메시지 제목",
-	"translate-export-csv-definition": "메시지 정의",
 	"translate-taction-translate": "번역하기",
 	"translate-taction-proofread": "검토하기",
 	"translate-taction-lstats": "언어 통계",
@@ -198,7 +195,6 @@
 	"supportedlanguages-summary": "이 문서는 {{SITENAME}}에서 지원하는 활성화된 언어의 목록과 그 언어로 번역하는 번역자의 이름을 보여줍니다.\n번역자가 편집을 더 많이 할수록 이름이 크게 나타납니다.\n밑줄의 색깔은 번역자가 얼마나 최근에 활동했는지를 나타냅니다.",
 	"supportedlanguages-colorlegend": "색깔 범례: 마지막 번역을 한 날짜가 $1일 전.",
 	"supportedlanguages-sqlite-error": "SQLite는 지원되지 않습니다",
-	"supportedlanguages-postgres-error": "PostgreSQL는 지원되지 않습니다",
 	"supportedlanguages-translators": "{{PLURAL:$2|{{GENDER:$3|번역자}}|번역자}}: $1",
 	"supportedlanguages-recenttranslations": "최근 번역",
 	"supportedlanguages-count": "총 {{PLURAL:$1|언어 수}}는 $1개입니다.",
@@ -330,7 +326,7 @@
 	"tux-save-unknown-error": "알 수 없는 오류가 발생했습니다.",
 	"tux-editor-placeholder-documentation": "메시지 설명문 추가",
 	"tux-editor-placeholder-language": "$1 번역",
-	"tux-editor-editsummary-placeholder": "변경사항 설명 (선택 사항)",
+	"tux-editor-editsummary-placeholder": "요약 (선택 사항)",
 	"tux-editor-paste-original-button-label": "원본 텍스트 붙여넣기",
 	"tux-editor-discard-changes-button-label": "바뀜 버리기",
 	"tux-editor-save-button-label": "번역 게시",
@@ -342,9 +338,6 @@
 	"tux-editor-edit-desc": "설명문 편집",
 	"tux-editor-add-desc": "설명문 추가",
 	"tux-editor-suggestions-title": "제안",
-	"tux-editor-latest-updates-title": "최근 업데이트",
-	"tux-editor-changes-without-summary": "요약 없는 {{PLURAL:$1|업데이트}} $1개",
-	"tux-editor-all-changes": "모든 변경사항",
 	"tux-editor-in-other-languages": "다른 언어",
 	"tux-editor-need-more-help": "도움이 더 필요하십니까?",
 	"tux-editor-ask-help": "자세한 정보에 대한 질문",
@@ -417,7 +410,5 @@
 	"translate-messagebundle-error-key-invalid-characters": "\"$1\" 키에 허용되지 않은 문자가 있습니다",
 	"translate-messagebundle-error-invalid-value": "\"$1\" 키에 문자열 값을 포함해서는 안 됩니다",
 	"translate-messagebundle-error-empty-value": "\"$1\" 키에 값이 없습니다",
-	"translate-messagebundle-error-metadata-type": "메타데이터는 배열이어야 합니다.",
-	"translate-messagebundle-group-description": "문서 [[$2|$1]]에 정의된 메시지 번들의 메시지입니다.",
-	"log-action-filter-translationreview": "조치 유형:"
+	"translate-messagebundle-group-description": "문서 [[$2|$1]]에 정의된 메시지 번들의 메시지입니다."
 }

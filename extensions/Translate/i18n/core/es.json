@@ -333,7 +333,6 @@
 	"tux-editor-edit-desc": "Editar la documentación",
 	"tux-editor-add-desc": "Añadir documentación",
 	"tux-editor-suggestions-title": "Sugerencias",
-	"tux-editor-all-changes": "Todos los cambios",
 	"tux-editor-in-other-languages": "En otros idiomas",
 	"tux-editor-need-more-help": "¿Necesitas más ayuda?",
 	"tux-editor-ask-help": "Pide más información",
@@ -399,7 +398,5 @@
 	"translate-syntax-error": "La traducción contiene errores sintácticos",
 	"tux-session-expired": "Tu sesión se ha cerrado. Inicia sesión en una pestaña aparte. Alternativamente, haz una copia de las traducciones sin guardar, inicia sesión, regresa a esta página y vuelve a escribir tus traducciones.",
 	"tux-nojs": "Esta página necesita JavaScript. JavaScript está desactivado, no funciona o no admitimos este navegador.",
-	"specialpages-group-translation": "Traducción",
-	"log-action-filter-translationreview": "Tipo de acción:",
-	"log-action-filter-translationreview-message": "Revisión de traducciones"
+	"specialpages-group-translation": "Traducción"
 }

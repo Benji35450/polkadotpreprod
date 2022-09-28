@@ -5,13 +5,12 @@ namespace MediaWiki\Extension\Translate\TranslatorInterface\Aid;
 
 use ApiBase;
 use MediaWiki\Extension\Translate\TranslatorInterface\TranslationHelperException;
-use MediaWiki\Extension\Translate\WebService\QueryAggregator;
-use MediaWiki\Extension\Translate\WebService\QueryAggregatorAware;
 use MediaWiki\Logger\LoggerFactory;
 use MessageGroups;
 use MessageHandle;
+use QueryAggregator;
+use QueryAggregatorAware;
 use Title;
-use Wikimedia\ParamValidator\ParamValidator;
 
 /**
  * Api module for querying message aids.
@@ -131,16 +130,16 @@ class TranslationAidsActionApi extends ApiBase {
 
 		return [
 			'title' => [
-				ParamValidator::PARAM_TYPE => 'string',
-				ParamValidator::PARAM_REQUIRED => true,
+				ApiBase::PARAM_TYPE => 'string',
+				ApiBase::PARAM_REQUIRED => true,
 			],
 			'group' => [
-				ParamValidator::PARAM_TYPE => 'string',
+				ApiBase::PARAM_TYPE => 'string',
 			],
 			'prop' => [
-				ParamValidator::PARAM_DEFAULT => implode( '|', $props ),
-				ParamValidator::PARAM_TYPE => $props,
-				ParamValidator::PARAM_ISMULTI => true,
+				ApiBase::PARAM_DFLT => implode( '|', $props ),
+				ApiBase::PARAM_TYPE => $props,
+				ApiBase::PARAM_ISMULTI => true,
 			],
 		];
 	}
